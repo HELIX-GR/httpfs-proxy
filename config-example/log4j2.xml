@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="baseDir">./logs</Property>
+        <Property name="appName">httpfs-proxy</Property>
+    </Properties>
+    
+    <Appenders>
+    
+        <Console name="console" target="SYSTEM_ERR">
+            <PatternLayout pattern="[%t] %-5level %logger{36} - %msg%n" />
+        </Console>
+        
+        <RollingFile name="file" filename="${baseDir}/${appName}.log"
+                filepattern="${baseDir}/${appName}-%d{dd-MM-yyyy}-%i.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+            <Policies>
+                <SizeBasedTriggeringPolicy size="100MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="10" />
+        </RollingFile>
+        
+    </Appenders>
+    
+    <Loggers>
+        <Logger name="gr.helix.httpfsproxy" level="DEBUG" additivity="true" />
+        
+        <Root level="INFO">
+            <AppenderRef ref="console" />
+            <AppenderRef ref="file" />
+        </Root>
+    </Loggers>
+</Configuration>
