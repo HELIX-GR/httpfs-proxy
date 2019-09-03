@@ -3,6 +3,7 @@ package gr.helix.httpfsproxy.config;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,14 +11,19 @@ import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter
 {
+    @Value("${gr.helix.httpfsproxy.admin.admin-password}")
+    String adminPassword;
+    
     @Autowired
     UserDetailsService userService;
     
@@ -30,6 +36,11 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
     @Override
     protected void configure(AuthenticationManagerBuilder builder) throws Exception
     {
+        // Fixme
+        builder.inMemoryAuthentication()
+            .withUser("admin").authorities("ADMIN")
+                .password("{noop}" + adminPassword);
+        
         builder.userDetailsService(userService)
             .passwordEncoder(new BCryptPasswordEncoder());
         
@@ -48,8 +59,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
                 .access("hasAuthority('USER')")
             .antMatchers(
                     "/admin/**")
-                .access("hasIpAddress('127.0.0.1/8')");
-                //.access("hasAuthority('ADMIN') and hasIpAddress('127.0.0.1/8')");
+                .access("hasAuthority('ADMIN') and hasIpAddress('127.0.0.1/8')");
         
         security.sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.NEVER);
