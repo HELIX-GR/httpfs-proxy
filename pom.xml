@@ -14,7 +14,7 @@
     <artifactId>httpfs-proxy</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>helix-httpfs-proxy</name>
-    <description>A proxy for an HttpFS/HDFS server</description>
+    <description>An authenticating proxy for an HttpFS/HDFS server</description>
     <packaging>jar</packaging>
 
     <properties>
@@ -133,6 +133,12 @@
             <artifactId>log4j-web</artifactId>
         </dependency>
         
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>28.1-jre</version>
+        </dependency>
+        
         <!-- Uncomment when packaging as a WAR (mark dependencies as provided) -->
         <!--
         <dependency>
@@ -141,6 +147,12 @@
             <scope>provided</scope>
         </dependency>
         -->
+        
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
     </dependencies>
 
@@ -287,7 +299,28 @@
                     </dependency>
                 </dependencies>
             </plugin>
-
+            
+            <!-- Debug generated code from Lombok -->
+            <plugin>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok-maven-plugin</artifactId>
+                <version>1.18.8.1</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>delombok</goal>
+                        </goals>
+                        <configuration>
+                            <skip>true</skip>
+                            <verbose>true</verbose>
+                            <sourceDirectory>src/main/java</sourceDirectory>
+                            <addOutputDirectory>false</addOutputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
         </plugins>
     </build>
 

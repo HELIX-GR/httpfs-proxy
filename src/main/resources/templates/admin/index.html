@@ -1,12 +1,10 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4" lang="en">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4" lang="en">
 
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HttpFs-Proxy - Admin</title>
-  
   <link type="text/css" rel="stylesheet" th:href="@{/css/style.css}"/>
 </head>
 
@@ -14,8 +12,33 @@
   <div th:replace="admin/navbar :: navbar"></div>
   
   <div class="container-fluid">
-    <h2 class="py-lg-3">Hello Spring!</h2>
-    <p>This is an example index page!</p>    
+    <h2 class="py-lg-3">Hello administrator!</h2>
+    
+    <h4>Backend</h4>
+    <div class="row">
+      <div class="col-md-8">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Service</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="s, it: ${backendServices}">
+              <td scope="row" th:text="${it.count}">1</td>
+              <td><code th:text="${s.uri}">http://c1-httpfs-n01.internal:14000/</code></td>
+              <td>
+                <span th:class="${s.operational}? 'text-success' : 'text-danger'" 
+                  th:text="${s.operational}? 'OK' : 'DOWN'">OK</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div> <!-- .row -->
+    
   </div>
 </body>
 

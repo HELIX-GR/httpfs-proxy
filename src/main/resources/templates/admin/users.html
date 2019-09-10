@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4" lang="en">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4" lang="en">
 
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HttpFs-Proxy - Administer users</title>
-  
   <link type="text/css" rel="stylesheet" th:href="@{/css/style.css}"/>
+  <th:block th:replace="admin/scripts :: fontawesome"/>
 </head>
 
 <body>
@@ -16,10 +16,75 @@
   <div id="main-1" class="container-fluid">
     <h2 class="py-lg-3">Administer users</h2>
     
-    <p>Todo</p>    
+    <div class="row" th:if="${infoMessage}">
+      <div class="col-md-9">
+        <div class="alert alert-info alert-dismissable">
+          <span th:text="${infoMessage}">Hey! something happened</span>
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-9 py-lg-2">
+        <div id="users-buttons" class="float-right">
+          <a id="new-user-btn" type="button" class="btn btn-success" th:href="@{/admin/users/new}">
+            <i class="fa fa-asterisk"></i> New</a>
+          <a id="edit-user-btn" type="button" class="btn btn-secondary disabled" href="#">
+            <i class="fa fa-pencil"></i> Edit</a>
+          <a id="delete-user-btn" type="button" class="btn btn-danger disabled" href="#">
+            <i class="fa fa-eraser"></i> Delete</a> 
+        </div>  
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-9">
+        <table id="users-table" class="table table-sm table-bordered table-hover">
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Name</th>
+              <th scope="col">Username</th>
+              <th scope="col">HDFS Username</th>
+              <th scope="col">Email</th>
+              <th scope="col">Active</th>
+              <th scope="col">Roles</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="user, it: ${users}" th:data-user-id="${user.id}" class="user-info  ">
+              <td scope="row" class="user-id">
+                <span th:text="${user.id}" class="text-monospace font-weight-bold">1</span>
+              </td>
+              <td class="user-name">
+                <span th:text="${user.fullname}">Michail Alexakis</span>
+              </td>
+              <td class="user-username" >
+                <code th:text="${user.username}">malex</code></td>
+              <td class="user-hdfs_username">
+                <code th:text="${user.hdfsUsername}">malex</code></td>
+              <td class="user-email">
+                <a th:text="${user.email}" th:href="'mailto:' + ${user.email}">malex@localhost</a></td>
+              <td class="user-active">
+                <span th:text="${user.active}? 'Yes' : 'No'">Yes</span></td>
+              <td class="user-roles">
+                <th:block th:each="role: ${user.roles}">
+                  <span class="pl-md-1" th:text="${role.friendlyName}">Administrator</span>
+                </th:block>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div> <!-- .row -->
+      
   </div> <!-- #main-1.container-fluid -->
   
   <th:block th:replace="admin/scripts :: bootstrap"/>
+  <script th:src="@{/js/admin/users.js}"></script>
 </body>
 
 </html>

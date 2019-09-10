@@ -3,9 +3,10 @@ create table public."user" (
    "_id" bigint not null,
     "email" varchar(255) not null,
     "fullname" varchar(255),
+    "username" varchar(255) not null,
+    "hdfs_username" varchar(255) not null,
     "active" boolean,
     "blocked" boolean,
-    "name" varchar(255) not null,
     "password" varchar(255),
     "registered_at" timestamp,
     "token" varchar(255),
@@ -19,7 +20,7 @@ create table public."user_role" (
     primary key ("_id")
 );
 
-alter table public."user" add constraint "uq_user_name" unique ("name");
+alter table public."user" add constraint "uq_user_username" unique ("username");
 
 alter table public."user_role" add constraint "uq_user_role_member_role" unique ("member", "role");
 

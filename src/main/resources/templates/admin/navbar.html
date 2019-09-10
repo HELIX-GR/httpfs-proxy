@@ -3,18 +3,18 @@
 
 <body>
   
-  <div th:fragment="navbar" id="navbar-1">
+  <div th:fragment="navbar" id="navbar-1" th:with="currentUri = ${#httpServletRequest.requestURI}">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <a class="navbar-brand" th:href="@{/admin/index}">HttpFs-Proxy</a>
       <ul class="navbar-nav mr-auto">
-      <li class="nav-item">
-        <a class="nav-link" th:href="@{/admin/users}">Users</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" th:href="@{/admin/status}">Status</a>
-      </li>
+        <li th:with="uri = '/admin/users'" class="nav-item">
+           <a th:class="'nav-link' + (${currentUri} == ${uri}? ' active' : '')" th:href="${uri}">Users</a>
+        </li>
+        <li th:with="uri = '/admin/status'" class="nav-item">
+           <a th:class="'nav-link' + (${currentUri} == ${uri}? ' active' : '')" th:href="${uri}">Status</a>
+        </li>
       </ul>
-    </nav>    
+    </nav>
   </div>
 
 </body>

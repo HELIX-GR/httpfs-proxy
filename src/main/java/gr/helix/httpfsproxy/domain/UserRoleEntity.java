@@ -27,7 +27,7 @@ import gr.helix.httpfsproxy.model.EnumRole;
 public class UserRoleEntity
 {
     @Id
-    @SequenceGenerator(sequenceName = "user_role_id_seq", name = "user_role_id_seq", allocationSize = 1)
+    @SequenceGenerator(sequenceName = "`user_role_id_seq`", name = "user_role_id_seq", allocationSize = 1)
     @GeneratedValue(generator = "user_role_id_seq", strategy = GenerationType.SEQUENCE)
     @Column(name = "`_id`")
     Long id;
@@ -78,21 +78,5 @@ public class UserRoleEntity
     public void setRole(EnumRole role)
     {
         this.role = role;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-        if (o instanceof UserRoleEntity) {
-            UserRoleEntity r = (UserRoleEntity) o;
-            return (r.member.id == member.id && r.role == role);
-        }
-        return false;
-    }
-    
-    @Override
-    public int hashCode()
-    {
-        return Arrays.hashCode(new long[] {member.id, role.ordinal()});
     }
 }

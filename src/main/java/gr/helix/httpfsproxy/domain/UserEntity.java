@@ -1,6 +1,8 @@
 package gr.helix.httpfsproxy.domain;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -17,7 +19,11 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.Assert;
+
 import gr.helix.httpfsproxy.model.EnumRole;
+import gr.helix.httpfsproxy.model.SimpleUserDetails;
 import gr.helix.httpfsproxy.model.UserInfo;
 
 @Entity(name = "User")
@@ -25,28 +31,31 @@ import gr.helix.httpfsproxy.model.UserInfo;
 public class UserEntity
 {  
     @Id    
-    @SequenceGenerator(sequenceName = "user_id_seq", name = "user_id_seq", allocationSize = 1)
+    @SequenceGenerator(sequenceName = "`user_id_seq`", name = "user_id_seq", allocationSize = 1)
     @GeneratedValue(generator = "user_id_seq", strategy = GenerationType.SEQUENCE)
     @Column(name = "`_id`")
     Long id;
     
     @NotNull
-    @Column(name = "`name`", unique = true)
-    String name;
+    @Column(name = "`username`", unique = true, updatable = false)
+    String username;
      
     @Column(name = "`fullname`")
     String fullname;
  
+    @Column(name = "`hdfs_username`", nullable = false)
+    String hdfsUsername;
+    
     @Column(name = "`password`")
     String password;
     
     @Column(name = "`active`")
-    Boolean isActive = true;
+    Boolean active = true;
     
     @Column(name = "`blocked`")
-    Boolean isBlocked = false;
+    Boolean blocked = false;
     
-    @Column(name = "`registered_at`")
+    @Column(name = "`registered_at`", updatable = false)
     ZonedDateTime registeredAt;
  
     @Column(name = "`token`", nullable = true)
@@ -56,22 +65,33 @@ public class UserEntity
     String email;
     
     @OneToMany(mappedBy = "member", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
-    Set<UserRoleEntity> memberOf;
+    List<UserRoleEntity> memberOf = new ArrayList<>();
     
     protected UserEntity() {}
     
     public UserEntity(String name, ZonedDateTime registeredAt) 
     {
-        this.name = name;
+        this.username = name;
         this.registeredAt = registeredAt;
     }
     
-    public UserEntity(UserInfo userinfo, ZonedDateTime registeredAt) 
+    /**
+     * Create an entity from a DTO object
+     * @param userinfo
+     */
+    public UserEntity(UserInfo userinfo) 
     {
-        this.name = userinfo.getUserName();
+        Assert.notNull(userinfo, "A userinfo object is required");
+        
+        this.username = userinfo.getUsername();
         this.fullname = userinfo.getFullname();
+        this.hdfsUsername = userinfo.getHdfsUsername();
         this.email = userinfo.getEmail();
-        this.registeredAt = registeredAt;
+        this.active = userinfo.isActive();
+        this.registeredAt = userinfo.getRegisteredAt();
+        
+        for (EnumRole role: userinfo.getRoles())
+            this.memberOf.add(UserRoleEntity.newMember(this, role));
     }
     
     public Long getId()
@@ -84,14 +104,14 @@ public class UserEntity
         this.id = id;
     }
 
-    public String getName()
+    public String getUsername()
     {
-        return name;
+        return username;
     }
 
-    public void setName(String name)
+    public void setUsername(String name)
     {
-        this.name = name;
+        this.username = name;
     }
 
     public String getFullname()
@@ -102,6 +122,16 @@ public class UserEntity
     public void setFullname(String fullname)
     {
         this.fullname = fullname;
+    }
+    
+    public String getHdfsUsername()
+    {
+        return hdfsUsername;
+    }
+    
+    public void setHdfsUsername(String hdfsUsername)
+    {
+        this.hdfsUsername = hdfsUsername;
     }
 
     public String getPassword()
@@ -116,22 +146,22 @@ public class UserEntity
 
     public Boolean isActive()
     {
-        return isActive;
+        return active;
     }
 
     public void setActive(Boolean isActive)
     {
-        this.isActive = isActive;
+        this.active = isActive;
     }
 
     public Boolean isBlocked()
     {
-        return isBlocked;
+        return blocked;
     }
 
     public void setBlocked(Boolean isBlocked)
     {
-        this.isBlocked = isBlocked;
+        this.blocked = isBlocked;
     }
 
     public ZonedDateTime getRegisteredAt()
@@ -182,19 +212,33 @@ public class UserEntity
      */
     public UserInfo toUserInfo()
     {
-        UserInfo u = new UserInfo(id, name, fullname, email);
-        u.setRegisteredAt(registeredAt);
-        return u;
+        UserInfo userInfo = new UserInfo();
+        userInfo.setId(id);
+        userInfo.setUsername(hdfsUsername);
+        userInfo.setFullname(fullname);
+        userInfo.setEmail(email);
+        userInfo.setHdfsUsername(hdfsUsername);
+        userInfo.setRegisteredAt(registeredAt);
+        userInfo.setActive(active);
+        userInfo.setRoles(getRoles());
+        return userInfo;
+    }
+    
+    /**
+     * Return a {@link UserDetails} object needed for authentication
+     * @return
+     */
+    public UserDetails toUserDetails()
+    {
+        return new SimpleUserDetails(getRoles(), username, password, active, blocked);
     }
 
     @Override
     public String toString()
     {
         return String.format(
-            "UserEntity " +
-                "[id=%s, name=%s, fullname=%s, isActive=%s, isBlocked=%s, " +
-                "registeredAt=%s, token=%s, email=%s, roles=%s]",
-            id, name, fullname, isActive, isBlocked, registeredAt, token, email, getRoles());
+            "UserEntity [id=%s, name=%s, active=%s, blocked=%s, email=%s, roles=%s]",
+            id, username, active, blocked, email, getRoles());
     }
     
     

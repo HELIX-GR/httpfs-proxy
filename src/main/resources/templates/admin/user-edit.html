@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HttpFs-Proxy - Add/Edit user</title>
+  <link type="text/css" rel="stylesheet" th:href="@{/css/style.css}"/>
+  <th:block th:replace="admin/scripts :: fontawesome"/>
+</head>
+
+<body>
+  <div th:replace="admin/navbar :: navbar"></div>
+  
+  <div id="main-1" class="container-fluid">
+    <form id="user-form" method="post" th:action="''" th:object="${userForm}">
+      
+      <h2 th:if="${userId}" class="py-lg-3" th:text="'Edit user: ' + *{fullname}">Edit user</h2>
+      <h2 th:if="!${userId}" class="py-lg-3" th:text="'Add new user'">Add user</h2>
+      
+      <input th:if="${userId}" type="hidden" th:field="*{id}" />
+      
+      <p th:if="${#fields.hasErrors('*')}" class="text-danger">
+        The form contains errors! Fix them and re-submit.
+      </p>
+        
+      <div class="form-group row">
+        <label for="input-username" class="col-form-label col-md-2">Username</label>
+        <div class="col-md-5">
+          <input type="text" class="form-control" id="input-username" th:field="*{username}" 
+            required minlength="3" aria-describedby="help-username" placeholder="Enter username..." />
+          <small th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="form-text text-danger"
+            >The username is not valid</small>
+          <small id="help-username" class="form-text text-muted">The username on the proxy application</small>
+        </div>
+      </div>
+        
+      <div class="form-group row">
+        <label for="input-hdfsUsername" class="col-form-label col-md-2">HDFS Username</label>
+        <div class="col-md-5">
+          <input type="text" class="form-control" id="input-hdfsUsername" th:field="*{hdfsUsername}"  
+            required minlength="3" aria-describedby="help-hdfsUsername" placeholder="Enter HDFS username..." />
+          <small th:if="${#fields.hasErrors('hdfsUsername')}" th:errors="*{hdfsUsername}" class="form-text text-danger"
+            >The username is not valid</small>
+          <small id="help-hdfsUsername" class="form-text text-muted">The username on the HDFS cluster</small>
+        </div>  
+      </div>
+      
+      <div class="form-group row">
+        <label for="input-fullname" class="col-form-label col-md-2">Full Name</label>
+        <div class="col-md-5">
+          <input type="text" class="form-control" id="input-fullname" th:field="*{fullname}" 
+            required minlegth="3" placeholder="Enter full name..." />
+          <small th:if="${#fields.hasErrors('fullname')}" th:errors="*{fullname}" class="form-text text-danger"
+            >The name is malformed</small> 
+          <small id="help-fullname" class="form-text text-muted">The human-friendly name of the user</small>
+        </div>
+      </div>
+
+      <div class="form-group row">
+        <label for="input-email" class="col-form-label col-md-2">Email</label>
+        <div class="col-md-5">
+          <input type="email" class="form-control" id="input-email" th:field="*{email}" 
+            required placeholder="Enter email..." />
+          <small th:if="${#fields.hasErrors('email')}" th:errors="*{email}" class="form-text text-danger"
+            >The email is not valid</small>
+        </div>  
+      </div>
+      
+      <div class="form-group row">
+        <label for="input-roles" class="col-form-label col-md-2">Roles</label>
+        <div class="col-md-3">
+          <select class="custom-select" th:field="*{roles}" multiple>
+             <option th:each="r: ${T(gr.helix.httpfsproxy.model.EnumRole).values()}"
+               th:value="${r}" th:text="${r.friendlyName}">
+             </option>
+          </select>
+          <small id="help-roles" class="form-text text-muted">Assign roles (authorities) to the user</small>
+        </div>
+      </div>
+      
+      <div class="form-group row">
+        <label for="input-password" class="col-form-label col-md-2">Password</label>
+        <div class="col-md-4">
+          <input type="password" class="form-control" id="input-password" name="password" 
+            minlength="6" placeholder="Enter password..." />
+          <small th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="form-text text-danger"
+            >The password is not accepted</small>
+          <small id="help-password" class="form-text text-muted"
+            >A hard-to-guess password. Leave empty to keep it unchanged!</small>
+        </div>   
+      </div>
+      
+      <div class="form-group row">
+         <label for="input-password1" class="col-form-label col-md-2">Repeat password</label>
+         <div class="col-md-4">
+           <input type="password" class="form-control" id="input-password1" 
+             minlength="6" placeholder="Repeat password..." />
+         </div>    
+      </div>
+      
+      <div class="form-group row">
+        <div class="col-md-7">
+          <div class="custom-control custom-switch">
+            <input type="checkbox" class="custom-control-input" id="input-active" th:field="*{active}">
+            <label class="custom-control-label" for="input-active">The user is active</label>
+          </div>
+        </div>
+      </div>
+      
+      <a class="btn btn-secondary" th:href="@{/admin/users}">Cancel</a>
+      <input type="submit" class="btn btn-primary" name="save" th:value="${userId}? 'Save' : 'Add'" />
+      
+    </form>  
+  </div> <!-- #main-1.container-fluid -->
+  
+  <th:block th:replace="admin/scripts :: bootstrap"/>
+  <script th:src="@{/js/admin/user-edit.js}"></script>
+</body>
+</html>

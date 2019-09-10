@@ -36,9 +36,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
     @Override
     protected void configure(AuthenticationManagerBuilder builder) throws Exception
     {
-        // Fixme
         builder.inMemoryAuthentication()
-            .withUser("admin").authorities("ADMIN")
+            .withUser("admin")
+                .authorities("ADMIN", "USER")
                 .password("{noop}" + adminPassword);
         
         builder.userDetailsService(userService)
@@ -55,7 +55,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
                     "/index", "/", "/about")
                 .permitAll()
             .antMatchers(
-                    "/user/me", "/files/**")
+                    "/users/me", "/files/**")
                 .access("hasAuthority('USER')")
             .antMatchers(
                     "/admin/**")
