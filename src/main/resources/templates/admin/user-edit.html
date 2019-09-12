@@ -27,11 +27,14 @@
       <div class="form-group row">
         <label for="input-username" class="col-form-label col-md-2">Username</label>
         <div class="col-md-5">
-          <input type="text" class="form-control" id="input-username" th:field="*{username}" 
+          <input type="text" id="input-username" th:field="*{username}"
+            th:class="${userId}? 'form-control-plaintext' : 'form-control'" 
+            th:attr="readonly = ${userId}? 'readonly' : null"  
             required minlength="3" aria-describedby="help-username" placeholder="Enter username..." />
-          <small th:if="${#fields.hasErrors('username')}" th:errors="*{username}" class="form-text text-danger"
+          <small th:if="!${userId} and ${#fields.hasErrors('username')}" th:errors="*{username}" class="form-text text-danger"
             >The username is not valid</small>
-          <small id="help-username" class="form-text text-muted">The username on the proxy application</small>
+          <small th:if="!${userId}" id="help-username" class="form-text text-muted"
+            >The username on the proxy application</small>
         </div>
       </div>
         
@@ -42,7 +45,8 @@
             required minlength="3" aria-describedby="help-hdfsUsername" placeholder="Enter HDFS username..." />
           <small th:if="${#fields.hasErrors('hdfsUsername')}" th:errors="*{hdfsUsername}" class="form-text text-danger"
             >The username is not valid</small>
-          <small id="help-hdfsUsername" class="form-text text-muted">The username on the HDFS cluster</small>
+          <small id="help-hdfsUsername" class="form-text text-muted"
+            >The username on the HDFS cluster</small>
         </div>  
       </div>
       
@@ -53,7 +57,8 @@
             required minlegth="3" placeholder="Enter full name..." />
           <small th:if="${#fields.hasErrors('fullname')}" th:errors="*{fullname}" class="form-text text-danger"
             >The name is malformed</small> 
-          <small id="help-fullname" class="form-text text-muted">The human-friendly name of the user</small>
+          <small id="help-fullname" class="form-text text-muted"
+            >The human-friendly name of the user</small>
         </div>
       </div>
 

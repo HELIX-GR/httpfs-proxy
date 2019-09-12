@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 import gr.helix.httpfsproxy.domain.UserEntity;
 import gr.helix.httpfsproxy.model.UserInfo;
@@ -37,12 +38,22 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>
     
     @Modifying
     @Transactional(readOnly = false)
-    default UserEntity createWith(UserInfo userInfo) 
+    default UserEntity createFrom(UserInfo userInfo) 
     {
-        return saveAndFlush(new UserEntity(userInfo));
+        Assert.notNull(userInfo, "Expected a userInfo object!");
+        Assert.isNull(userInfo.getId(), "Did not expect a user ID");
+        return save(UserEntity.fromUserInfo(userInfo));
     };
     
-    // Todo update from UserInfo
+    @Modifying
+    @Transactional(readOnly = false)
+    default UserEntity updateFrom(UserInfo userInfo) 
+    {
+        Assert.notNull(userInfo, "Expected a userInfo object!");
+        final Long uid = userInfo.getId();
+        Assert.notNull(uid, "Expected a non-null user ID!");
+        return getOne(uid).withUserInfo(userInfo);
+    };
     
     @Modifying
     @Query("UPDATE User u SET u.password = :password WHERE u.id = :uid")

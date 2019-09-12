@@ -1,5 +1,6 @@
 package gr.helix.httpfsproxy.model;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -59,5 +60,23 @@ public class UserForm
         userInfo.setRoles(roles);
         userInfo.setActive(active);
         return userInfo;
+    }
+    
+    public void copyUserInfo(UserInfo userInfo)
+    {
+        this.id = userInfo.getId();
+        this.username = userInfo.getUsername();
+        this.hdfsUsername = userInfo.getHdfsUsername();
+        this.email = userInfo.getEmail();
+        this.fullname = userInfo.getFullname();
+        this.roles = new ArrayList<>(userInfo.getRoles());
+        this.active = userInfo.isActive();
+    }
+    
+    public static UserForm from(UserInfo userInfo)
+    {
+        UserForm form = new UserForm();
+        form.copyUserInfo(userInfo);
+        return form;
     }
 }

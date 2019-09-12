@@ -2,6 +2,7 @@ package gr.helix.httpfsproxy.domain;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -21,6 +22,8 @@ import javax.validation.constraints.NotNull;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.Assert;
+
+import com.google.common.collect.Iterables;
 
 import gr.helix.httpfsproxy.model.EnumRole;
 import gr.helix.httpfsproxy.model.SimpleUserDetails;
@@ -76,22 +79,27 @@ public class UserEntity
     }
     
     /**
-     * Create an entity from a DTO object
-     * @param userinfo
+     * Create an new entity from a DTO object
+     * @param userInfo
      */
-    public UserEntity(UserInfo userinfo) 
+    public static UserEntity fromUserInfo(UserInfo userInfo) 
     {
-        Assert.notNull(userinfo, "A userinfo object is required");
+        Assert.notNull(userInfo, "A userInfo object is required");
+        Assert.isNull(userInfo.getId(), "Did not expect a user ID");
         
-        this.username = userinfo.getUsername();
-        this.fullname = userinfo.getFullname();
-        this.hdfsUsername = userinfo.getHdfsUsername();
-        this.email = userinfo.getEmail();
-        this.active = userinfo.isActive();
-        this.registeredAt = userinfo.getRegisteredAt();
+        UserEntity userEntity = new UserEntity();
         
-        for (EnumRole role: userinfo.getRoles())
-            this.memberOf.add(UserRoleEntity.newMember(this, role));
+        userEntity.username = userInfo.getUsername();
+        userEntity.fullname = userInfo.getFullname();
+        userEntity.hdfsUsername = userInfo.getHdfsUsername();
+        userEntity.email = userInfo.getEmail();
+        userEntity.active = userInfo.isActive();
+        userEntity.registeredAt = userInfo.getRegisteredAt();
+        
+        for (EnumRole role: userInfo.getRoles())
+            userEntity.memberOf.add(UserRoleEntity.newMember(userEntity, role));
+        
+        return userEntity;
     }
     
     public Long getId()
@@ -196,25 +204,35 @@ public class UserEntity
     
     public void addRole(EnumRole role)
     {
-        memberOf.add(UserRoleEntity.newMember(this, role));
+        if (Iterables.indexOf(this.memberOf, m -> role == m.role) < 0) {
+            memberOf.add(UserRoleEntity.newMember(this, role));
+        }
+    }
+    
+    public void setRoles(Collection<EnumRole> roles) 
+    {
+        // Remove roles not present on the given collection
+        this.memberOf.removeIf(m -> !roles.contains(m.role));
+        // Add roles from given collection
+        for (EnumRole role: roles)
+            addRole(role);
     }
     
     public List<EnumRole> getRoles()
     {
         return memberOf.stream()
-            .map(UserRoleEntity::getRole)
-            .collect(Collectors.toList());
+            .collect(Collectors.mapping(UserRoleEntity::getRole, Collectors.toList()));
     }
 
     /**
-     * Return a DTO from this entity
+     * Return a DTO object from this entity
      * @return
      */
     public UserInfo toUserInfo()
     {
         UserInfo userInfo = new UserInfo();
         userInfo.setId(id);
-        userInfo.setUsername(hdfsUsername);
+        userInfo.setUsername(username);
         userInfo.setFullname(fullname);
         userInfo.setEmail(email);
         userInfo.setHdfsUsername(hdfsUsername);
@@ -222,6 +240,35 @@ public class UserEntity
         userInfo.setActive(active);
         userInfo.setRoles(getRoles());
         return userInfo;
+    }
+    
+    /**
+     * Copy from a DTO object.
+     * <p>
+     * Note that only updatable fields are copied (so, <tt>id</tt>, <tt>username</tt> and 
+     * <tt>registeredAt</tt> are never copied).  
+     * @param userInfo
+     */
+    public void copyFromUserInfo(UserInfo userInfo)
+    {
+        Assert.notNull(userInfo, "Expected a userInfo object!");
+        this.fullname = userInfo.getFullname();
+        this.email = userInfo.getEmail();
+        this.hdfsUsername = userInfo.getHdfsUsername();
+        this.active = userInfo.isActive();
+        this.setRoles(userInfo.getRoles());
+    }
+    
+    /**
+     * Copy from a DTO object and return this (for method chaining)
+     * @param userInfo
+     * @return this
+     * @see {@link UserEntity#copyFromUserInfo(UserInfo)}
+     */
+    public UserEntity withUserInfo(UserInfo userInfo)
+    {
+        this.copyFromUserInfo(userInfo);
+        return this;
     }
     
     /**

@@ -13,12 +13,17 @@
   <div th:replace="admin/navbar :: navbar"></div>
   
   <div id="main-1" class="container-fluid">
-    <h2 class="py-lg-3">Delete user: <span th:text="${user.fullname}">malex</span></h2>
+    <h2 class="py-lg-3">Delete user: <span th:text="${userForm.fullname}">malex</span></h2>
     
     <div class="row">
       <div class="col-md-6">
-        <form method="post">
-                  
+        <form id="user-form" th:action="''" method="post" th:object="${userForm}">
+          <p>Are you sure you want to delete user <strong th:text="*{username}"></strong>?
+          </p>
+          <input type="hidden" th:field="*{id}" />
+          
+          <a class="btn btn-secondary" th:href="@{/admin/users}">Cancel</a>
+          <input type="submit" class="btn btn-danger" name="delete" value="Delete!" />  
         </form>
       </div>
     </div> <!-- .row -->

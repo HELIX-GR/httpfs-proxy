@@ -17,6 +17,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -116,21 +117,24 @@ public class AdminController
         BindingResult bindingResult,
         RedirectAttributes redirectAttrs)
     {
-        logger.debug("addUser(): Got {}", userForm);
-        
         final ModelAndView r = new ModelAndView();
-        if (bindingResult.hasErrors()) {
+        
+        // Check
+        if (userForm.getId() != null) {
+            r.addObject("errorMessage", "Did not expect a user ID");
+            r.setViewName("error-400");
+            return r;
+        } else if (bindingResult.hasErrors()) {
             r.setViewName("admin/user-edit");
             return r;
         }
         
         // Save to repository
-        final UserInfo userInfo = userForm.toUserInfo();
-        final UserEntity userEntity = userRepository.createWith(userInfo);
+        final UserEntity userEntity = userRepository.createFrom(userForm.toUserInfo());
         final long uid = userEntity.getId();
-        logger.info("addUser(): Created user #{}: username={} ", uid, userEntity.getUsername());
+        logger.info("addUser(): Created user #{}: username={}", uid, userEntity.getUsername());
         
-        // Update password
+        // Update password (if a non-empty password is given)
         if (!StringUtils.isEmpty(userForm.getPassword())) {
             userRepository.updatePassword(uid, passwordEncoder.encode(userForm.getPassword()));
             logger.info("addUser(): Updated password for user #{}", uid);
@@ -145,54 +149,99 @@ public class AdminController
     
     @GetMapping(path = {"/admin/users/{userId}/edit"})
     public ModelAndView showUserForm(
-        @PathVariable("userId") Integer userId,
+        @PathVariable("userId") Long userId,
         @ModelAttribute("userForm") UserForm userForm)
     {
-        final UserInfo user = userRepository.findById(userId.longValue())
+        final UserInfo userInfo = userRepository.findById(userId.longValue())
             .map(UserEntity::toUserInfo)
             .orElse(null);
         final ModelAndView r = new ModelAndView();
-        if (user == null) {
+        if (userInfo == null) {
             r.setStatus(HttpStatus.NOT_FOUND);
             r.setViewName("/error-404");
         } else {
-            // Todo set fields for userForm
+            userForm.copyUserInfo(userInfo);
             r.addObject("userId", userId);
-            r.setViewName("/admin/user-edit");
+            r.setViewName("admin/user-edit");
         }
-        return null;
+        return r;
     }
     
     @PostMapping(path = {"/admin/users/{userId}/edit"})
-    public String editUser(
-        ModelMap model, @PathVariable("userId") Integer userId)
+    public ModelAndView editUser(
+        @PathVariable("userId") Long userId,
+        @ModelAttribute("userForm") @Valid UserForm userForm,
+        BindingResult bindingResult,
+        RedirectAttributes redirectAttrs)
     {
-        return "redirect:/admin/users";
+        final ModelAndView r = new ModelAndView();
+        if (!userId.equals(userForm.getId())) {
+            r.addObject("errorMessage", "Expected a specific user ID");
+            r.setViewName("error-400");
+            return r;
+        } else if (bindingResult.hasErrors()) {
+            r.setViewName("admin/user-edit");
+            return r;
+        }
+        
+        // Save to repository
+        userRepository.updateFrom(userForm.toUserInfo());
+        logger.info("editUser(): Updated info for user #{}", userId);
+        
+        // Update password (if a non-empty password is given)
+        if (!StringUtils.isEmpty(userForm.getPassword())) {
+            userRepository.updatePassword(userId, passwordEncoder.encode(userForm.getPassword()));
+            logger.info("addUser(): Updated password for user #{}", userId);
+        }
+        
+        // Redirect 
+        redirectAttrs.addFlashAttribute("infoMessage",
+            String.format("The user `%s` is updated successfully!", userForm.getUsername()));
+        r.setViewName("redirect:/admin/users");
+        return r;
     }
     
     @GetMapping(path = {"/admin/users/{userId}/delete"})
-    public ModelAndView showUserDeleteForm(
-        @PathVariable("userId") Integer userId)
+    public ModelAndView showUserFormForDelete(
+        @PathVariable("userId") Long userId,
+        @ModelAttribute("userForm") UserForm userForm)
     {
-        UserInfo user = userRepository.findById(userId.longValue())
+        UserInfo userInfo = userRepository.findById(userId.longValue())
             .map(UserEntity::toUserInfo)
             .orElse(null);
         ModelAndView r = new ModelAndView();
-        if (user == null) {
+        if (userInfo == null) {
             r.setStatus(HttpStatus.NOT_FOUND);
             r.setViewName("/error-404");
         } else {
-            r.addObject("user", user);
+            userForm.copyUserInfo(userInfo);
+            r.addObject("userId", userId);
             r.setViewName("/admin/user-delete");
         }
         return r;
     }
     
     @PostMapping(path = {"/admin/users/{userId}/delete"})
-    public String deleteUser(
-        ModelMap model, @PathVariable("userId") Integer userId)
+    public ModelAndView deleteUser(
+        @PathVariable("userId") Long userId,
+        RedirectAttributes redirectAttrs)
     {
-        return "redirect:/admin/users";
+        UserInfo userInfo = userRepository.findById(userId.longValue())
+            .map(UserEntity::toUserInfo)
+            .orElse(null);
+        ModelAndView r = new ModelAndView();
+        if (userInfo == null) {
+            r.setStatus(HttpStatus.NOT_FOUND);
+            r.setViewName("/error-404");
+        }
+        
+        // Delete from repository
+        userRepository.deleteById(userId);
+        
+        // Redirect
+        redirectAttrs.addFlashAttribute("infoMessage",
+            String.format("The user `%s` is deleted", userInfo.getUsername()));
+        r.setViewName("redirect:/admin/users");
+        return r;
     }
-    
 }
