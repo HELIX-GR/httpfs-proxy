@@ -28,7 +28,7 @@
     </div>
     
     <div class="row">
-      <div class="col-md-9 py-lg-2">
+      <div class="col-md-10 py-lg-2">
         <div id="users-buttons" class="float-right">
           <a id="new-user-btn" type="button" class="btn btn-success" th:href="@{/admin/users/new}">
             <i class="fa fa-asterisk"></i> New</a>
@@ -41,14 +41,14 @@
     </div>
     
     <div class="row">
-      <div class="col-md-9">
+      <div class="col-md-10">
         <table id="users-table" class="table table-sm table-bordered table-hover">
           <thead>
             <tr>
-              <th scope="col">ID</th>
-              <th scope="col">Name</th>
+              <th scope="col">#</th>
               <th scope="col">Username</th>
               <th scope="col">HDFS Username</th>
+              <th scope="col">Full Name</th>
               <th scope="col">Email</th>
               <th scope="col">Active</th>
               <th scope="col">Roles</th>
@@ -59,13 +59,15 @@
               <td scope="row" class="user-id">
                 <span th:text="${user.id}" class="text-monospace font-weight-bold">1</span>
               </td>
+              <td class="user-username" >
+                <code th:text="${user.username}">malex</code>
+              </td>
+              <td class="user-hdfs_username">
+                <code th:text="${user.hdfsUsername}">malex</code>
+              </td>
               <td class="user-name">
                 <span th:text="${user.fullname}">Michail Alexakis</span>
               </td>
-              <td class="user-username" >
-                <code th:text="${user.username}">malex</code></td>
-              <td class="user-hdfs_username">
-                <code th:text="${user.hdfsUsername}">malex</code></td>
               <td class="user-email">
                 <a th:text="${user.email}" th:href="'mailto:' + ${user.email}">malex@localhost</a></td>
               <td class="user-active">
@@ -80,6 +82,28 @@
         </table>
       </div>
     </div> <!-- .row -->
+    
+    <!-- Pagination -->
+    <div class="row">
+      <div class="col-md-10">      
+        <nav>
+          <ul class="pagination">
+            <li class="page-item" th:classappend="${pageNumber} > 1? null : 'disabled'">
+              <a class="page-link" tabindex="-1" 
+                th:href="${pageNumber} > 1? @{/admin/users(pageNumber=${pageNumber} - 1)} : '#'">Previous</a>
+            </li>
+            <li th:each="i: ${#numbers.sequence(1, numberOfPages)}"
+              class="page-item" th:classappend="${i} == ${pageNumber}? 'active' : null">
+              <a class="page-link" th:href="@{/admin/users(pageNumber=${i})}" th:text="${i}">1</a>
+            </li>
+            <li class="page-item" th:classappend="${pageNumber} < ${numberOfPages}? null : 'disabled'">
+              <a class="page-link" tabindex="-1" 
+                th:href="${pageNumber} < ${numberOfPages}? @{/admin/users(pageNumber=${pageNumber} + 1)} : '#'">Next</a>        
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
       
   </div> <!-- #main-1.container-fluid -->
   

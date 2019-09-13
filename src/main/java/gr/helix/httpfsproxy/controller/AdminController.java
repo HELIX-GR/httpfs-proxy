@@ -1,6 +1,7 @@
 package gr.helix.httpfsproxy.controller;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,12 +27,16 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Lists;
 
-import gr.helix.httpfsproxy.config.HttpFsServiceProperties;
+import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.domain.UserEntity;
 import gr.helix.httpfsproxy.model.UserForm;
 import gr.helix.httpfsproxy.model.UserInfo;
+import gr.helix.httpfsproxy.model.backend.ServiceStatus;
+import gr.helix.httpfsproxy.model.backend.ServiceStatusInfo;
 import gr.helix.httpfsproxy.repository.UserRepository;
+import gr.helix.httpfsproxy.service.PingService;
 
 @Controller
 public class AdminController
@@ -42,44 +46,15 @@ public class AdminController
     private final static BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     
     @Autowired
-    private HttpFsServiceProperties httpfsServiceProperties;
-    
-    @Autowired
     private UserRepository userRepository;
-    
-    static class ServiceInfo
-    {
-        URI uri;
-        
-        boolean operational;
-        
-        public ServiceInfo(URI uri, boolean operational)
-        {
-            this.uri = uri;
-            this.operational = operational;
-        }
-        
-        @JsonProperty
-        public URI getUri()
-        {
-            return uri;
-        }
-        
-        @JsonProperty
-        public boolean isOperational()
-        {
-            return operational;
-        }
-    }
 
+    @Autowired
+    private PingService pingService;
+    
     @GetMapping(path = {"/admin/", "/admin/index"})
     public String index(ModelMap model)
     {
-        // Todo check service status
-        
-        model.addAttribute("backendServices", Collections.singletonList(
-            new ServiceInfo(httpfsServiceProperties.getBaseUri(), true)));
-        
+        model.addAttribute("backendServices", pingService.getReport().values()); 
         return "admin/index";
     }
     
@@ -91,16 +66,22 @@ public class AdminController
     
     @GetMapping(path = {"/admin/users"})
     public String showUsers(ModelMap model, 
-        @RequestParam(name = "page", defaultValue = "0") Integer pageNumber,
-        @RequestParam(name = "size", defaultValue = "12") Integer pageSize)
+        @RequestParam(name = "pageNumber", defaultValue = "1") Integer pageNumber)
     {
-        final PageRequest pageRequest = PageRequest.of(pageNumber, pageSize);
-        List<UserInfo> users = userRepository.findAll(pageRequest).stream()
+        final int pageSize = 20;
+        
+        final PageRequest pageRequest = PageRequest.of(pageNumber - 1, pageSize);
+        final int count = (int) userRepository.count();
+        final List<UserInfo> users = userRepository.findAll(pageRequest).stream()
             .collect(Collectors.mapping(UserEntity::toUserInfo, Collectors.toList()));
+        final int numberOfPages = (count + pageSize - 1) / pageSize;
         
         model.addAttribute("users", users);
+        model.addAttribute("userCount", count);
+        model.addAttribute("pageNumber", pageNumber);
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("numberOfPages", numberOfPages);
         
-        // Todo Add pagination
         return "admin/users";
     }
     
@@ -233,6 +214,7 @@ public class AdminController
         if (userInfo == null) {
             r.setStatus(HttpStatus.NOT_FOUND);
             r.setViewName("/error-404");
+            return r;
         }
         
         // Delete from repository

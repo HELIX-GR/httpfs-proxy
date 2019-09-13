@@ -16,22 +16,35 @@
     
     <h4>Backend</h4>
     <div class="row">
-      <div class="col-md-8">
-        <table class="table table-sm">
+      <div class="col-md-12">
+        <table class="table table-sm table-bordered">
           <thead>
             <tr>
               <th scope="col">#</th>
               <th scope="col">Service</th>
               <th scope="col">Status</th>
+              <th scope="col">Last check</th>
+              <th scope="col" style="width: 25%">Error</th>
             </tr>
           </thead>
           <tbody>
-            <tr th:each="s, it: ${backendServices}">
-              <td scope="row" th:text="${it.count}">1</td>
-              <td><code th:text="${s.uri}">http://c1-httpfs-n01.internal:14000/</code></td>
+            <tr th:each="s, it: ${backendServices}" 
+              th:classappend="${s.status.successful}? 'table-light' : 'table-danger'">
+              <td scope="row">
+                <span th:text="${it.count}" class="font-weight-bold">1</span>
+              </td>
               <td>
-                <span th:class="${s.operational}? 'text-success' : 'text-danger'" 
-                  th:text="${s.operational}? 'OK' : 'DOWN'">OK</span>
+                 <code th:text="${s.baseUri}">http://c1-httpfs-n01.internal:14000/</code>
+              </td>
+              <td>
+                <span th:text="${s.status}">OK</span>
+              </td>
+              <td>
+                <span th:text="${s.timestamp}"></span>
+              </td>
+              <td>
+                <code class="text-wrap" th:text="${s.errorMessage}? ${s.errorMessage} : '-'"
+                  >Something was wrong</code>
               </td>
             </tr>
           </tbody>
