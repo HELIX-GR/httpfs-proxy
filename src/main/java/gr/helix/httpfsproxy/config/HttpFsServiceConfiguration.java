@@ -15,5 +15,5 @@ public class HttpFsServiceConfiguration
 {
     private List<URI> baseUris;
 
-    private String defaultUser;    
+    private String defaultUser;
 }

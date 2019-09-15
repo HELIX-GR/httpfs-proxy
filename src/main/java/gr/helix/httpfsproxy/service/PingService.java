@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.http.HttpEntity;
@@ -29,6 +31,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.model.backend.ServiceStatus;
 import gr.helix.httpfsproxy.model.backend.ServiceStatusInfo;
+import gr.helix.httpfsproxy.model.backend.VoidRequestParameters;
+import gr.helix.httpfsproxy.model.backend.ops.GetHomeDirectoryResponse;
+import gr.helix.httpfsproxy.service.ops.GetHomeDirectoryTemplate;
 
 @Service
 public class PingService
@@ -45,35 +50,28 @@ public class PingService
     @Autowired
     private ObjectMapper objectMapper;
   
-    private Map<URI, ServiceStatusInfo> statusReport = new ConcurrentHashMap<>();
+    @Autowired
+    @Qualifier("getHomeDirectoryTemplate")
+    private OperationTemplate<VoidRequestParameters, GetHomeDirectoryResponse> getHomeDirectoryTemplate;
     
+    private Map<URI, ServiceStatusInfo> statusReport = new ConcurrentHashMap<>();
+        
     void pingBackendService(URI baseUri) 
         throws HttpResponseException, IOException
-    {
-        final URI uri = baseUri.resolve("/webhdfs/v1");
-        final HttpUriRequest request = RequestBuilder.get(uri)
-            .addParameter("op", "gethomedirectory")
-            .addParameter("user.name", backend.getDefaultUser())
-            .build();
+    {        
+        final String userName = backend.getDefaultUser();
+        final HttpUriRequest request = getHomeDirectoryTemplate.requestForPath(userName, "/");
         
-        final String expectedHomeDirectory = String.format("/user/%s", backend.getDefaultUser());
+        final String expectedHomeDirectory = String.format("/user/%s", userName);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
             final StatusLine responseStatus = response.getStatusLine();
             if (responseStatus.getStatusCode() != HttpStatus.SC_OK)
-                throw new HttpResponseException(
-                    responseStatus.getStatusCode(), responseStatus.getReasonPhrase());
-            final HttpEntity e = response.getEntity();
-            if (e == null)
-                throw new IllegalStateException("Expected a non-empty response entity");
-            final String contentType = e.getContentType().getValue();
-            if (!MediaType.APPLICATION_JSON_VALUE.equals(contentType))
-                throw new IllegalStateException(
-                    "Got an unexpected Content-Type from response: " + contentType);
-            final Map<?,?> r = objectMapper.readValue(e.getContent(), Map.class);
-            if (!expectedHomeDirectory.equals(r.get("Path")))
-                throw new IllegalStateException(
-                    "Expected key [Path] to hold the user\'s home directory: " + r.get("Path"));
+                throw new HttpResponseException(responseStatus.getStatusCode(), responseStatus.getReasonPhrase());
+            final GetHomeDirectoryResponse r = 
+                getHomeDirectoryTemplate.responseFromHttpEntity(response.getEntity());
+            if (!expectedHomeDirectory.equals(r.getPath()))
+                throw new IllegalStateException("Expected key [Path] to hold the user\'s home directory!");
         }   
         return;
     }
@@ -95,7 +93,7 @@ public class PingService
             } catch (IllegalStateException ex) {
                 statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.FAILED, now, ex.getMessage());
             } catch (IOException ex) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.UNREACHABLE, now, 
+                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.DOWN, now, 
                     String.format("Encountered an I/O exception: %s", ex.getMessage()));
             } 
             if (statusInfo == null) {

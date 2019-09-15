@@ -5,14 +5,14 @@ public enum ServiceStatus
     OK("OK", true),
     
     /**
-     * The service is unreachable. 
-     * An attempt to communicate to the service results to some kind of I/O exception.
+     * The service is unreachable a.k.a down.
+     * An attempt to communicate to the service results to some kind of socket-level I/O exception.
      */
-    UNREACHABLE("UNREACHABLE", false),
+    DOWN("DOWN", false),
     
     /**
-     * The service responds in a unsuccessful manner (e.g with a non-2xx HTTP status or with
-     * an unexpected content-type).
+     * The service responds in a unsuccessful manner e.g with a non-2xx HTTP status or with
+     * unexpected content.
      */
     FAILED("FAILED", false),
     
