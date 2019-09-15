@@ -30,7 +30,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
     @Override
     public void configure(WebSecurity security) throws Exception
     {
-        security.ignoring().antMatchers("/doc/**", "/css/**");
+        security.ignoring().antMatchers("/doc/**", "/css/**", "/js/**");
     }
      
     @Override
@@ -65,7 +65,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
             .sessionCreationPolicy(SessionCreationPolicy.NEVER);
         
         security.httpBasic()
-            .realmName("HDFS storage");
+            .realmName("HttpFS-Proxy");
         
         // Exclude certain requests from CSRF protection
         

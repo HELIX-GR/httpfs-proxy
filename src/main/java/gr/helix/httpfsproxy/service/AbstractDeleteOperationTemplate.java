@@ -18,18 +18,4 @@ public abstract class AbstractDeleteOperationTemplate <P extends BaseRequestPara
     { 
         return "DELETE";
     }
-    
-    @Override
-    public HttpUriRequest requestForPath(@NotEmpty String userName, @NotNull String path,
-        InputStream in, ContentType contentType)
-    {
-        throw new UnsupportedOperationException("DELETE requests do not support a request payload");
-    }
-    
-    @Override
-    public HttpUriRequest requestForPath(@NotEmpty String userName, @NotNull String path,
-        @Valid @NotNull P parameters, InputStream in, ContentType contentType)
-    {
-        throw new UnsupportedOperationException("DELETE requests do not support a request payload");
-    }
 }

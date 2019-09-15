@@ -11,7 +11,6 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import gr.helix.httpfsproxy.model.backend.BaseRequestParameters;
@@ -44,30 +43,26 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
      * Build a {@link HttpUriRequest} for an operation on given path.
      * 
      * @param userName The name of the HDFS user we act on behalf 
-     * @param path
+     * @param filepath
      * @param parameters
      * @return
      */
     HttpUriRequest requestForPath(
-        @NotEmpty String userName, 
-        @NotNull String path, 
-        @Valid @NotNull P parameters);
+        @NotEmpty String userName, @NotNull String filepath, @Valid P parameters);
     
     
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
      * 
      * @param userName The name of the HDFS user we act on behalf 
-     * @param path
+     * @param filepath
      * @param parameters
      * @param in The input stream to form the request HTTP entity
      * @param contentType THe content-type of the input stream
      * @return
      */
     HttpUriRequest requestForPath(
-        @NotEmpty String userName, 
-        @NotNull String path, 
-        @Valid @NotNull P parameters, 
+        @NotEmpty String userName, @NotNull String filepath, @Valid P parameters, 
         InputStream in, ContentType contentType);
     
     /**
@@ -75,8 +70,7 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
      * @see {@link OperationTemplate#requestForPath(String, String, BaseRequestParameters)}
      */
     HttpUriRequest requestForPath(
-        @NotEmpty String userName, 
-        @NotNull String path);
+        @NotEmpty String userName, @NotNull String filepath);
     
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path
@@ -84,7 +78,6 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
      * @see {@link OperationTemplate#requestForPath(String, String, BaseRequestParameters, InputStream, ContentType)}
      */
     HttpUriRequest requestForPath(
-        @NotEmpty String userName, 
-        @NotNull String path,
+        @NotEmpty String userName, @NotNull String filepath,
         InputStream in, ContentType contentType);
 }

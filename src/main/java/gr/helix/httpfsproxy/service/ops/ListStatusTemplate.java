@@ -5,17 +5,17 @@ import org.springframework.validation.annotation.Validated;
 
 import gr.helix.httpfsproxy.model.backend.EnumOperation;
 import gr.helix.httpfsproxy.model.backend.VoidRequestParameters;
-import gr.helix.httpfsproxy.model.backend.ops.GetHomeDirectoryResponse;
+import gr.helix.httpfsproxy.model.backend.ops.ListStatusResponse;
 import gr.helix.httpfsproxy.service.AbstractGetOperationTemplate;
 
-@Service("getHomeDirectoryTemplate")
+@Service("listStatusTemplate")
 @Validated
-public class GetHomeDirectoryTemplate extends AbstractGetOperationTemplate<VoidRequestParameters, GetHomeDirectoryResponse>
+public class ListStatusTemplate extends AbstractGetOperationTemplate<VoidRequestParameters, ListStatusResponse>
 {
     @Override
     public EnumOperation operation()
     {
-        return EnumOperation.GETHOMEDIRECTORY;
+        return EnumOperation.LISTSTATUS;
     }
 
     @Override
@@ -25,8 +25,8 @@ public class GetHomeDirectoryTemplate extends AbstractGetOperationTemplate<VoidR
     }
     
     @Override
-    protected Class<GetHomeDirectoryResponse> getResponseType()
+    protected Class<ListStatusResponse> getResponseType()
     {
-        return GetHomeDirectoryResponse.class;
+        return ListStatusResponse.class;
     }
 }

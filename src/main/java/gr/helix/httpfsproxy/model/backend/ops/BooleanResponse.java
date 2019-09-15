@@ -4,8 +4,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @lombok.Data
-public class GetHomeDirectoryResponse
+public class BooleanResponse
 {
-    @JsonProperty("Path")
-    String path;
+    @JsonProperty("boolean")
+    Boolean flag;
+
 }

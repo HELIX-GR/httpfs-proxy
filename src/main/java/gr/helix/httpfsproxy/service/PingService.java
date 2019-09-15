@@ -46,9 +46,6 @@ public class PingService
     @Autowired
     @Qualifier("httpClient")
     private CloseableHttpClient httpClient;
-    
-    @Autowired
-    private ObjectMapper objectMapper;
   
     @Autowired
     @Qualifier("getHomeDirectoryTemplate")
