@@ -269,9 +269,17 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
                     <skipITs>${integration-tests.skip}</skipITs>
+                    <skipAfterFailureCount>1</skipAfterFailureCount>
                     <includes>
+                        <include>gr.helix.httpfsproxy.integration_test.service.*Tests.java</include>
                         <include>gr.helix.httpfsproxy.integration_test.controller.*Tests.java</include>
                     </includes>
+                    <systemProperties>
+                        <property>
+                            <name>log4j.configurationFile</name>
+                            <value>classpath:config/log4j2-testing.xml</value>
+                        </property>
+                    </systemProperties>
                 </configuration>
             </plugin>
             

@@ -7,35 +7,28 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.annotation.PostConstruct;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.model.backend.ServiceStatus;
 import gr.helix.httpfsproxy.model.backend.ServiceStatusInfo;
 import gr.helix.httpfsproxy.model.backend.VoidRequestParameters;
 import gr.helix.httpfsproxy.model.backend.ops.GetHomeDirectoryResponse;
-import gr.helix.httpfsproxy.service.ops.GetHomeDirectoryTemplate;
 
 @Service
+@Profile({"production", "development"})
 public class PingService
 {
     private final static Logger logger = LoggerFactory.getLogger(PingService.class);
@@ -80,25 +73,30 @@ public class PingService
     public void pingBackend()
     {
         for (URI baseUri: backend.getBaseUris()) {
-            final Instant now = Instant.now();
+            final Instant t0 = Instant.now();
             ServiceStatusInfo statusInfo = null;
             try {
                 pingBackendService(baseUri);
             } catch (HttpResponseException ex) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.FAILED, now, 
+                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.FAILED, t0, 
                     String.format("The request has failed: %s", ex.getMessage()));
             } catch (IllegalStateException ex) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.FAILED, now, ex.getMessage());
+                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.FAILED, t0, ex.getMessage());
             } catch (IOException ex) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.DOWN, now, 
+                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.DOWN, t0, 
                     String.format("Encountered an I/O exception: %s", ex.getMessage()));
-            } 
-            if (statusInfo == null) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.OK, now);
             }
-            if (!statusInfo.getStatus().isSuccessful()) 
+            final Instant t1 = Instant.now();
+            if (statusInfo == null) {
+                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.OK, t0);
+            }
+            if (!statusInfo.getStatus().isSuccessful()) {
                 logger.error("Reporting status for {}: {} - {}", 
                     baseUri, statusInfo.getStatus(), statusInfo.getErrorMessage());
+            } else {
+                logger.debug("Reporting status for {}: OK ({}ms)", baseUri, 
+                    t1.toEpochMilli() - t0.toEpochMilli());
+            }
             // Store status to our internal report
             this.statusReport.put(baseUri, statusInfo);
         }

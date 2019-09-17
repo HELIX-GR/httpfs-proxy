@@ -27,7 +27,12 @@
               <th scope="col" style="width: 25%">Error</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody th:if="${#lists.isEmpty(backendServices)}">
+            <tr>
+              <td colspan="5"><strong>N/A</strong></td>
+            </tr>
+          </tbody>
+          <tbody th:if="not ${#lists.isEmpty(backendServices)}">
             <tr th:each="s, it: ${backendServices}" 
               th:classappend="${s.status.successful}? 'table-light' : 'table-danger'">
               <td scope="row">

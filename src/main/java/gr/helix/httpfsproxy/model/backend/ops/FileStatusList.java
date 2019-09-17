@@ -8,5 +8,5 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 class FileStatusList
 {
     @JsonProperty("FileStatus")
-    List<FileStatus> fileStatuses;
+    List<FileStatus> statusList;
 }

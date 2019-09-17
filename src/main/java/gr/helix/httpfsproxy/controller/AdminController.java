@@ -1,9 +1,9 @@
 package gr.helix.httpfsproxy.controller;
 
-import java.net.URI;
-import java.time.Instant;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
@@ -26,14 +26,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Lists;
-
-import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.domain.UserEntity;
 import gr.helix.httpfsproxy.model.UserForm;
 import gr.helix.httpfsproxy.model.UserInfo;
-import gr.helix.httpfsproxy.model.backend.ServiceStatus;
 import gr.helix.httpfsproxy.model.backend.ServiceStatusInfo;
 import gr.helix.httpfsproxy.repository.UserRepository;
 import gr.helix.httpfsproxy.service.PingService;
@@ -48,13 +43,14 @@ public class AdminController
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
+    @Autowired(required = false)
     private PingService pingService;
     
     @GetMapping(path = {"/admin/", "/admin/index"})
     public String index(ModelMap model)
     {
-        model.addAttribute("backendServices", pingService.getReport().values()); 
+        model.addAttribute("backendServices", 
+            pingService == null? null : pingService.getReport().values()); 
         return "admin/index";
     }
     
