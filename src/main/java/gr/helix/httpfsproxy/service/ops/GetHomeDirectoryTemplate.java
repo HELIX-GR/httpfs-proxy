@@ -25,7 +25,7 @@ public class GetHomeDirectoryTemplate extends AbstractGetOperationTemplate<VoidR
     }
     
     @Override
-    protected Class<GetHomeDirectoryResponse> getResponseType()
+    protected Class<GetHomeDirectoryResponse> responseType()
     {
         return GetHomeDirectoryResponse.class;
     }

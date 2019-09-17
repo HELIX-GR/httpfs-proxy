@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @see https://hadoop.apache.org/docs/r2.9.2/hadoop-project-dist/hadoop-hdfs/WebHDFS.html#FileStatus_Properties
  */
 @lombok.Data
-class FileStatus
+public class FileStatus
 {
     enum EnumType {
         FILE, 

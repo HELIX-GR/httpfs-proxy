@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import gr.helix.httpfsproxy.model.backend.BaseRequestParameters;
 import gr.helix.httpfsproxy.model.backend.EnumOperation;
+import gr.helix.httpfsproxy.validation.FilePath;
 
 /**
  * A template for operations on the HttpFs backend
@@ -36,41 +37,40 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
      * 
      * @param e
      */
-    R responseFromHttpEntity(HttpEntity e) 
+    R responseFromHttpEntity(@NotNull HttpEntity e) 
         throws JsonProcessingException, IOException;
     
     /**
      * Build a {@link HttpUriRequest} for an operation on given path.
      * 
      * @param userName The name of the HDFS user we act on behalf 
-     * @param filepath
+     * @param filePath
      * @param parameters
-     * @return
      */
     HttpUriRequest requestForPath(
-        @NotEmpty String userName, @NotNull String filepath, @Valid P parameters);
+        @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters);
     
     
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
      * 
      * @param userName The name of the HDFS user we act on behalf 
-     * @param filepath
-     * @param parameters
+     * @param filePath The file path on the HDFS filesystem (an empty path corresponds to
+     *   the user's home directory)
+     * @param parameters An object that models operation-specific parameters
      * @param in The input stream to form the request HTTP entity
      * @param contentType THe content-type of the input stream
-     * @return
      */
     HttpUriRequest requestForPath(
-        @NotEmpty String userName, @NotNull String filepath, @Valid P parameters, 
-        InputStream in, ContentType contentType);
+        @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
+        @NotNull InputStream in, @NotNull ContentType contentType);
     
     /**
      * Build a {@link HttpUriRequest} for an operation on given path (no extra parameters)
      * @see {@link OperationTemplate#requestForPath(String, String, BaseRequestParameters)}
      */
     HttpUriRequest requestForPath(
-        @NotEmpty String userName, @NotNull String filepath);
+        @NotEmpty String userName, @NotNull @FilePath String filePath);
     
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path
@@ -78,6 +78,22 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
      * @see {@link OperationTemplate#requestForPath(String, String, BaseRequestParameters, InputStream, ContentType)}
      */
     HttpUriRequest requestForPath(
-        @NotEmpty String userName, @NotNull String filepath,
-        InputStream in, ContentType contentType);
+        @NotEmpty String userName, @NotNull @FilePath String filePath,
+        @NotNull InputStream in, @NotNull ContentType contentType);
+    
+    /**
+     * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
+     * @see {@link OperationTemplate#requestForPath(String, String, InputStream, ContentType)}
+     */
+    HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath,
+        @NotNull byte[] data, @NotNull ContentType contentType);
+    
+    /**
+     * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
+     * @see {@link OperationTemplate#requestForPath(String, String, BaseRequestParameters, InputStream, ContentType)}
+     */
+    HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
+        @NotNull byte[] data, @NotNull ContentType contentType);
 }

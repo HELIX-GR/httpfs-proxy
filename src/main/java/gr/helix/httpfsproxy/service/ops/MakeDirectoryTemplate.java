@@ -5,28 +5,28 @@ import org.springframework.validation.annotation.Validated;
 
 import gr.helix.httpfsproxy.model.backend.EnumOperation;
 import gr.helix.httpfsproxy.model.backend.ops.BooleanResponse;
-import gr.helix.httpfsproxy.model.backend.ops.RenameRequestParameters;
+import gr.helix.httpfsproxy.model.backend.ops.MakeDirectoryRequestParameters;
 import gr.helix.httpfsproxy.service.AbstractPutOperationTemplate;
 
-@Service("renameTemplate")
+@Service("makeDirectoryTemplate")
 @Validated
-public class RenameTemplate extends AbstractPutOperationTemplate<RenameRequestParameters, BooleanResponse>
+public class MakeDirectoryTemplate extends AbstractPutOperationTemplate<MakeDirectoryRequestParameters, BooleanResponse>
 {
     @Override
     public EnumOperation operation()
     {
-        return EnumOperation.RENAME;
+        return EnumOperation.MKDIRS;
     }
-    
-    @Override
-    protected boolean requireParameters()
-    {
-        return true;
-    }
-    
+
     @Override
     protected Class<BooleanResponse> responseType()
     {
         return BooleanResponse.class;
+    }
+
+    @Override
+    protected boolean requireParameters()
+    {
+        return false;
     }
 }

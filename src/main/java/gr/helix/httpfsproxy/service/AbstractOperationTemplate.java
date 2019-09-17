@@ -20,6 +20,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +33,16 @@ import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.model.backend.BaseRequestParameters;
+import gr.helix.httpfsproxy.validation.FilePath;
 
 public abstract class AbstractOperationTemplate <P extends BaseRequestParameters, R> implements OperationTemplate<P, R>
 {
     protected final static String USERNAME_PARAMETER_KEY = "user.name";
     
     protected final static String OPERATION_PARAMETER_KEY = "op";
+    
+    protected final static String PARAMETERS_REQUIRED_MESSAGE_FORMAT = 
+        "This operation (%s) requires parameters";
     
     @Autowired
     protected ObjectMapper objectMapper;
@@ -52,7 +57,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     
     protected final Random random = new Random();
       
-    protected abstract Class<R> getResponseType();
+    protected abstract Class<R> responseType();
     
     protected abstract boolean requireParameters();
     
@@ -68,16 +73,13 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     }
     
     /**
-     * Check if path is valid and return a (normalized) absolute path
+     * Return an absolute path possibly resolving a home-relative path
      * 
      * @param userName The HDFS user
      * @param filePath The path on the HDFS filesystem
      */
-    protected String checkPath(String userName, String filePath)
+    protected String resolvePath(String userName, String filePath)
     {
-        Assert.state(!StringUtils.isEmpty(userName), "Expected a non-empty userName!");
-        Assert.state(filePath != null, "Expected a non-null path!");
-        
         // Turn to an absolute path
         if (!filePath.startsWith("/")) {
             // Resolve against user's home directory
@@ -85,22 +87,10 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
             filePath = StringUtils.applyRelativePath(homeDir, filePath);
         }
         
-        if (filePath.equals("/")) {
-            return filePath;
-        }
-        
-        // Check name components of given path
-        final String[] names = filePath.substring(1).split(File.separator);
-        Assert.state(names.length > 0, "Expected at least 1 name component");
-        if (!Arrays.stream(names).allMatch(filenamePattern.asPredicate())) {
-            throw new IllegalArgumentException("The path has invalid name components: " + filePath);
-        }
-        
         return filePath;
     }
     
-    protected URI uriForPath(URI baseUri, String userName, String filePath, P parameters) 
-        throws URISyntaxException
+    protected URI uriForPath(URI baseUri, String userName, String filePath, P parameters)
     {
         final String contextPath = baseUri.getPath();
         final String path = StringUtils.applyRelativePath("/webhdfs/v1/", filePath);
@@ -122,74 +112,122 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
             }
         }
         
-        return uriBuilder.build();
-    }
-    
-    @Override
-    public R responseFromHttpEntity(HttpEntity e) throws JsonProcessingException, IOException
-    {
-        Assert.notNull(e, "Expected an non-empty HTTP entity");
-        Assert.state(e.getContentType() != null, "Expected to find a content-type header");
-        Assert.state("application/json".equals(e.getContentType().getValue()), 
-            "Expected content encoded as JSON (application/json)");
-        return objectMapper.readValue(e.getContent(), this.getResponseType());
-    }
-    
-    @Override
-    public HttpUriRequest requestForPath(@NotEmpty String userName, @NotNull String filePath)
-    {
-        if (this.requireParameters()) {
-            throw new IllegalStateException(
-                "The operation [" + this.operation() + "] requires parameters");
-        }
-        return requestForPath(userName, filePath, (P) null);
-    }
-    
-    @Override
-    public HttpUriRequest requestForPath(
-        @NotEmpty String userName, @NotNull String filePath, @Valid P parameters)
-    {
-        return requestForPath(userName, filePath, parameters, null, null);
-    }
-    
-    @Override
-    public HttpUriRequest requestForPath(
-        @NotEmpty String userName, @NotNull String filePath,
-        InputStream in, ContentType contentType)
-    {
-        if (this.requireParameters()) {
-            throw new IllegalStateException(
-                "The operation [" + this.operation() + "] requires parameters");
-        }
-        return requestForPath(userName, filePath, (P) null, in, contentType);
-    }
-    
-    @Override
-    public HttpUriRequest requestForPath(
-        @NotEmpty String userName, @NotNull String filePath, @Valid P parameters, 
-        InputStream inputStream, ContentType contentType)
-    {
-        if (parameters == null && this.requireParameters()) {
-            throw new IllegalStateException(
-                "The operation [" + this.operation() + "] requires parameters");
-        }
+        // Build target URI
         
-        filePath = this.checkPath(userName, filePath);
-        
-        URI uri = null; 
+        URI uri = null;
         try {
-            uri = this.uriForPath(this.baseUri(), userName, filePath, parameters);
+            uri = uriBuilder.build();
         } catch (URISyntaxException ex) {
             throw new IllegalStateException(ex);
         }
         
-        final RequestBuilder reqBuilder = RequestBuilder.create(this.methodName())
-            .setUri(uri);
+        return uri;
+    }
+    
+    protected void checkParameters(P parameters)
+    {
+        if (parameters == null && this.requireParameters()) {
+            throw new IllegalStateException(
+                String.format(PARAMETERS_REQUIRED_MESSAGE_FORMAT, this.operation()));
+        }
+    }
+    
+    protected HttpUriRequest _requestForPath(
+        String userName, String filePath, P parameters, InputStream inputStream, ContentType contentType)
+    {
+        Assert.state(!StringUtils.isEmpty(userName), "Expected a non-empty userName!");
+        Assert.state(filePath != null, "Expected a non-null path!");
+        
+        checkParameters(parameters);
+        filePath = this.resolvePath(userName, filePath);
+        
+        final URI uri = this.uriForPath(this.baseUri(), userName, filePath, parameters);
+        final RequestBuilder reqBuilder = RequestBuilder.create(this.methodName()).setUri(uri);
         
         if (inputStream != null) {
             reqBuilder.setEntity(new InputStreamEntity(inputStream, contentType));
         }
         
         return reqBuilder.build();
+    }
+
+    protected HttpUriRequest _requestForPath(
+        String userName, String filePath, P parameters, byte[] data, ContentType contentType)
+    {
+        Assert.state(!StringUtils.isEmpty(userName), "Expected a non-empty userName!");
+        Assert.state(filePath != null, "Expected a non-null path!");
+        
+        checkParameters(parameters);
+        filePath = this.resolvePath(userName, filePath);
+        
+        final URI uri = this.uriForPath(this.baseUri(), userName, filePath, parameters);
+        final RequestBuilder reqBuilder = RequestBuilder.create(this.methodName()).setUri(uri);
+        
+        if (data != null) {
+            reqBuilder.setEntity(new ByteArrayEntity(data, contentType));
+        }
+        
+        return reqBuilder.build();
+    }
+    
+    //
+    // Public interface
+    //
+    
+    @Override
+    public R responseFromHttpEntity(@NotNull HttpEntity e) 
+        throws JsonProcessingException, IOException
+    {
+        Assert.notNull(e, "Expected a non-null HTTP entity");
+        Assert.state(e.getContentType() != null, "Expected to find a content-type header");
+        Assert.state("application/json".equals(e.getContentType().getValue()), 
+            "Expected content encoded as JSON (application/json)");
+        return objectMapper.readValue(e.getContent(), this.responseType());
+    }
+    
+    @Override
+    public HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath)
+    {
+        return _requestForPath(userName, filePath, (P) null, (byte[]) null, null);
+    }
+    
+    @Override
+    public HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters)
+    {
+        return _requestForPath(userName, filePath, parameters, (byte[]) null, null);
+    }
+    
+    @Override
+    public HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath,
+        @NotNull InputStream inputStream, @NotNull ContentType contentType)
+    {
+        return _requestForPath(userName, filePath, (P) null, inputStream, contentType);
+    }
+    
+    @Override
+    public HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
+        @NotNull InputStream inputStream, @NotNull ContentType contentType)
+    {
+        return _requestForPath(userName, filePath, parameters, inputStream, contentType);
+    }
+    
+    @Override
+    public HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath, 
+        @NotNull byte[] data, @NotNull ContentType contentType)
+    {
+        return _requestForPath(userName, filePath, (P) null, data, contentType);
+    }
+    
+    @Override
+    public HttpUriRequest requestForPath(@NotEmpty String userName,
+        @NotNull @FilePath String filePath, @Valid P parameters, 
+        @NotNull byte[] data, @NotNull ContentType contentType)
+    {
+        return _requestForPath(userName, filePath, parameters, data, contentType);
     }
 }

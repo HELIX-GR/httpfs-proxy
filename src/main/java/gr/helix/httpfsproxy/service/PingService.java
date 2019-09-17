@@ -17,21 +17,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.model.backend.ServiceStatus;
-import gr.helix.httpfsproxy.model.backend.ServiceStatusInfo;
+import gr.helix.httpfsproxy.model.backend.ServiceStatusReport;
 import gr.helix.httpfsproxy.model.backend.VoidRequestParameters;
 import gr.helix.httpfsproxy.model.backend.ops.GetHomeDirectoryResponse;
 
 @Service
-@Profile({"production", "development"})
+@ConditionalOnProperty(prefix = "gr.helix.httpfsproxy", name = "ping-backend")
 public class PingService
 {
     private final static Logger logger = LoggerFactory.getLogger(PingService.class);
+    
+    private final static long CHECK_INTERVAL_MILLIS = 5000L;
     
     @Autowired
     HttpFsServiceConfiguration backend;
@@ -44,7 +46,7 @@ public class PingService
     @Qualifier("getHomeDirectoryTemplate")
     private OperationTemplate<VoidRequestParameters, GetHomeDirectoryResponse> getHomeDirectoryTemplate;
     
-    private Map<URI, ServiceStatusInfo> statusReport = new ConcurrentHashMap<>();
+    private Map<URI, ServiceStatusReport> statusReport = new ConcurrentHashMap<>();
         
     void pingBackendService(URI baseUri) 
         throws HttpResponseException, IOException
@@ -69,26 +71,26 @@ public class PingService
     /**
      * Ping backend HttpFs services and report their status
      */
-    @Scheduled(fixedRate = 5000L)
+    @Scheduled(fixedRate = CHECK_INTERVAL_MILLIS)
     public void pingBackend()
     {
         for (URI baseUri: backend.getBaseUris()) {
             final Instant t0 = Instant.now();
-            ServiceStatusInfo statusInfo = null;
+            ServiceStatusReport statusInfo = null;
             try {
                 pingBackendService(baseUri);
             } catch (HttpResponseException ex) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.FAILED, t0, 
+                statusInfo = ServiceStatusReport.of(baseUri, ServiceStatus.FAILED, t0, 
                     String.format("The request has failed: %s", ex.getMessage()));
             } catch (IllegalStateException ex) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.FAILED, t0, ex.getMessage());
+                statusInfo = ServiceStatusReport.of(baseUri, ServiceStatus.FAILED, t0, ex.getMessage());
             } catch (IOException ex) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.DOWN, t0, 
+                statusInfo = ServiceStatusReport.of(baseUri, ServiceStatus.DOWN, t0, 
                     String.format("Encountered an I/O exception: %s", ex.getMessage()));
             }
             final Instant t1 = Instant.now();
             if (statusInfo == null) {
-                statusInfo = ServiceStatusInfo.of(baseUri, ServiceStatus.OK, t0);
+                statusInfo = ServiceStatusReport.of(baseUri, ServiceStatus.OK, t0);
             }
             if (!statusInfo.getStatus().isSuccessful()) {
                 logger.error("Reporting status for {}: {} - {}", 
@@ -102,7 +104,7 @@ public class PingService
         }
     }
     
-    public Map<URI, ServiceStatusInfo> getReport()
+    public Map<URI, ServiceStatusReport> getReport()
     {
         return Collections.unmodifiableMap(this.statusReport);
     }

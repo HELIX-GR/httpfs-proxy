@@ -1,20 +1,18 @@
 package gr.helix.httpfsproxy.model.backend.ops;
 
-import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import gr.helix.httpfsproxy.model.backend.BaseRequestParameters;
-import gr.helix.httpfsproxy.validation.FilePath;
 
 @lombok.Data
 @lombok.EqualsAndHashCode(callSuper = false)
 @lombok.AllArgsConstructor
 @lombok.NoArgsConstructor
-public class RenameRequestParameters extends BaseRequestParameters
+public class MakeDirectoryRequestParameters extends BaseRequestParameters
 {
-    @NotEmpty
-    @FilePath
-    @JsonProperty("destination")
-    String destinationPath;
+    @JsonProperty("permission")
+    @Pattern(regexp = "^[0-7][0-7][0-7]$")
+    String permission;
 }

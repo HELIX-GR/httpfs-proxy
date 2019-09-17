@@ -25,7 +25,7 @@ public class ListStatusTemplate extends AbstractGetOperationTemplate<VoidRequest
     }
     
     @Override
-    protected Class<ListStatusResponse> getResponseType()
+    protected Class<ListStatusResponse> responseType()
     {
         return ListStatusResponse.class;
     }

@@ -6,7 +6,7 @@ import java.time.Instant;
 @lombok.Getter
 @lombok.ToString
 @lombok.AllArgsConstructor(staticName = "of")
-public class ServiceStatusInfo
+public class ServiceStatusReport
 {
     @lombok.NonNull
     private final URI baseUri;
@@ -18,7 +18,7 @@ public class ServiceStatusInfo
     
     private final String errorMessage;
 
-    public static ServiceStatusInfo of(URI baseUri, ServiceStatus status, Instant now)
+    public static ServiceStatusReport of(URI baseUri, ServiceStatus status, Instant now)
     {
         return of(baseUri, status, now, null);
     }
