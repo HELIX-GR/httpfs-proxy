@@ -18,19 +18,19 @@ import org.springframework.validation.annotation.Validated;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.AppendToFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.EnumOperation;
-import gr.helix.httpfsproxy.service.AbstractPutOperationTemplate;
+import gr.helix.httpfsproxy.service.AbstractPostOperationTemplate;
 import gr.helix.httpfsproxy.validation.FilePath;
 
-@Service("createFileTemplate")
+@Service("appendToFileTemplate")
 @Validated
-public class CreateFileTemplate extends AbstractPutOperationTemplate<CreateFileRequestParameters, Void>
+public class AppendToFileTemplate extends AbstractPostOperationTemplate<AppendToFileRequestParameters, Void>
 {
     @Override
     public EnumOperation operation()
     {
-        return EnumOperation.CREATE;
+        return EnumOperation.APPEND;
     }
 
     @Override
@@ -65,8 +65,8 @@ public class CreateFileTemplate extends AbstractPutOperationTemplate<CreateFileR
     }
     
     @Override
-    protected CreateFileRequestParameters defaultParameters()
+    protected AppendToFileRequestParameters defaultParameters()
     {
-        return new CreateFileRequestParameters();
+        return new AppendToFileRequestParameters();
     }
 }

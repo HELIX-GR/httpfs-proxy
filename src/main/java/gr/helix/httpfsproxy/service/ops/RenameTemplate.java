@@ -29,4 +29,10 @@ public class RenameTemplate extends AbstractPutOperationTemplate<RenameRequestPa
     {
         return BooleanResponse.class;
     }
+    
+    @Override
+    protected boolean requireBody()
+    {
+        return false;
+    }
 }

@@ -36,7 +36,7 @@ public class CreateFileRequestParameters extends BaseRequestParameters
     @FileReplication
     @Min(1)
     @Max(10)
-    private Integer replication;
+    private Integer replication = 2;
     
     @JsonProperty("permission")
     @Pattern(regexp = "^[0-7][0-7][0-7]$")

@@ -65,12 +65,9 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull InputStream in, @NotNull ContentType contentType);
     
-    default HttpUriRequest requestForPath(
+    HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
-        @NotNull InputStream in)
-    {
-        return requestForPath(userName, filePath, parameters, in, ContentType.APPLICATION_OCTET_STREAM);
-    }
+        @NotNull InputStream in);
     
     /**
      * Build a {@link HttpUriRequest} for an operation on given path (no extra parameters)
@@ -88,12 +85,9 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
         @NotEmpty String userName, @NotNull @FilePath String filePath,
         @NotNull InputStream in, @NotNull ContentType contentType);
     
-    default HttpUriRequest requestForPath(
+    HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath,
-        @NotNull InputStream in)
-    {
-        return requestForPath(userName, filePath, in, ContentType.APPLICATION_OCTET_STREAM);
-    }
+        @NotNull InputStream in);
     
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
@@ -103,12 +97,9 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
         @NotEmpty String userName, @NotNull @FilePath String filePath,
         @NotNull byte[] data, @NotNull ContentType contentType);
     
-    default HttpUriRequest requestForPath(
+    HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath,
-        @NotNull byte[] data)
-    {
-        return requestForPath(userName, filePath, data, ContentType.APPLICATION_OCTET_STREAM);
-    }
+        @NotNull byte[] data);
     
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
@@ -118,10 +109,7 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull byte[] data, @NotNull ContentType contentType);
     
-    default HttpUriRequest requestForPath(
+    HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
-        @NotNull byte[] data)
-    {
-        return requestForPath(userName, filePath, parameters, data, ContentType.APPLICATION_OCTET_STREAM);
-    }
+        @NotNull byte[] data);
 }

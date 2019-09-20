@@ -1,6 +1,6 @@
 package gr.helix.httpfsproxy.model.ops;
 
-import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Min;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -10,9 +10,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @lombok.AllArgsConstructor
 @lombok.NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class MakeDirectoryRequestParameters extends BaseRequestParameters
+public class AppendToFileRequestParameters extends BaseRequestParameters
 {
-    @JsonProperty("permission")
-    @Pattern(regexp = "^[0-7][0-7][0-7]$")
-    String permission = "775";
+    @JsonProperty("data")
+    private final boolean hasData = true;
+    
+    @JsonProperty("buffersize")
+    @Min(4096)
+    private Integer bufferSize;
 }

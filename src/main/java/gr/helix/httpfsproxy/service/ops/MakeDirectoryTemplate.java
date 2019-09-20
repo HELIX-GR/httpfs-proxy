@@ -29,4 +29,16 @@ public class MakeDirectoryTemplate extends AbstractPutOperationTemplate<MakeDire
     {
         return false;
     }
+    
+    @Override
+    protected boolean requireBody()
+    {
+        return false;
+    }
+    
+    @Override
+    protected MakeDirectoryRequestParameters defaultParameters()
+    {
+        return new MakeDirectoryRequestParameters();
+    }
 }

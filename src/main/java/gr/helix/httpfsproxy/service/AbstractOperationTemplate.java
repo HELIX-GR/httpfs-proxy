@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Random;
@@ -34,33 +36,57 @@ import gr.helix.httpfsproxy.validation.FilePath;
 
 public abstract class AbstractOperationTemplate <P extends BaseRequestParameters, R> implements OperationTemplate<P, R>
 {
-    protected final static String USERNAME_PARAMETER_KEY = "user.name";
+    private final static String USERNAME_PARAMETER_KEY = "user.name";
     
-    protected final static String OPERATION_PARAMETER_KEY = "op";
+    private final static String OPERATION_PARAMETER_KEY = "op";
     
-    protected final static String PARAMETERS_REQUIRED_MESSAGE_FORMAT = 
+    private final static String PARAMETERS_REQUIRED_MESSAGE_FORMAT = 
         "This operation (%s) requires parameters";
     
-    protected final static String BODY_REQUIRED_MESSAGE_FORMAT = 
+    private final static String BODY_REQUIRED_MESSAGE_FORMAT = 
         "This operation (%s) requires a request body";
     
-    @Autowired
-    protected ObjectMapper objectMapper;
+    private final static String CONTENT_TYPE_NOT_ALLOWED_MESSAGE_FORMAT = 
+        "This operation (%s) does not allow a content-type of [%s]";
     
     @Autowired
-    protected JavaPropsMapper propertiesMapper;
+    private ObjectMapper objectMapper;
+    
+    @Autowired
+    private JavaPropsMapper propertiesMapper;
+    
+    private final Random random = new Random();
     
     @Autowired
     protected HttpFsServiceConfiguration backend;
     
-    protected final Random random = new Random();
-      
     protected abstract Class<R> responseType();
     
+    /**
+     * Are parameters required for this type of request? 
+     */
     protected abstract boolean requireParameters();
     
+    /**
+     * Is a body (a request payload) required for this type of request?
+     */
     protected boolean requireBody() { return false; }
     
+    protected P defaultParameters() { return null; };
+    
+    /**
+     * Specify a default content-type for this type of request (to be used if not supplied to
+     *   {@link OperationTemplate#requestForPath}.
+     * @return a content-type, or <tt>null</tt> if no default exists
+     */
+    protected ContentType defaultContentType() { return null; };
+    
+    /**
+     * Narrow-down what is considered to be a valid content-type for this request
+     * @return a collection of allowed content types, or <tt>null</tt> to not allow everything 
+     */
+    protected Collection<ContentType> allowedContentTypes() { return null; };
+        
     /**
      * Choose a backend (as a base URI) to communicate with.
      * <p>This implementation simply returns a random pick from our available URIs
@@ -72,13 +98,37 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         return backend.getBaseUris().get(b < 2? 0 : random.nextInt(b));
     }
     
+    private void checkParameters(P parameters)
+    {
+        if (parameters == null && this.requireParameters()) {
+            throw new IllegalStateException(
+                String.format(PARAMETERS_REQUIRED_MESSAGE_FORMAT, this.operation()));
+        }
+    }
+    
+    private <D> void checkBody(D content, ContentType contentType)
+    {
+        if (content == null && this.requireBody()) {
+            throw new IllegalStateException(
+                String.format(BODY_REQUIRED_MESSAGE_FORMAT, this.operation()));
+        }
+        
+        if (content != null && contentType != null) {
+            Collection<ContentType> allowedContentTypes = this.allowedContentTypes();
+            if (allowedContentTypes != null && !allowedContentTypes.contains(contentType)) {
+                throw new IllegalStateException(
+                    String.format(CONTENT_TYPE_NOT_ALLOWED_MESSAGE_FORMAT, this.operation(), contentType));
+            }
+        }
+    }
+    
     /**
      * Return an absolute path possibly resolving a home-relative path
      * 
      * @param userName The HDFS user
      * @param filePath The path on the HDFS filesystem
      */
-    protected String resolvePath(String userName, String filePath)
+    private String resolvePath(String userName, String filePath)
     {
         // Turn to an absolute path
         if (!filePath.startsWith("/")) {
@@ -90,7 +140,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         return filePath;
     }
     
-    protected URI uriForPath(URI baseUri, String userName, String filePath, P parameters)
+    private URI uriForPath(URI baseUri, String userName, String filePath, P parameters)
     {
         final String contextPath = baseUri.getPath();
         final String path = StringUtils.applyRelativePath("/webhdfs/v1/", filePath);
@@ -99,6 +149,9 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
             .setPath(StringUtils.applyRelativePath(contextPath, path))
             .addParameter(OPERATION_PARAMETER_KEY, this.operation().name())
             .addParameter(USERNAME_PARAMETER_KEY, userName);
+        
+        if (parameters == null)
+            parameters = this.defaultParameters();
         
         if (parameters != null) {
             Properties parametersAsProperties = null; 
@@ -124,30 +177,14 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         return uri;
     }
     
-    protected void checkParameters(P parameters)
-    {
-        if (parameters == null && this.requireParameters()) {
-            throw new IllegalStateException(
-                String.format(PARAMETERS_REQUIRED_MESSAGE_FORMAT, this.operation()));
-        }
-    }
-    
-    protected <B> void checkBody(B body)
-    {
-        if (body == null && this.requireBody()) {
-            throw new IllegalStateException(
-                String.format(BODY_REQUIRED_MESSAGE_FORMAT, this.operation()));
-        }
-    }
-    
-    protected HttpUriRequest _requestForPath(
+    private HttpUriRequest _requestForPath(
         String userName, String filePath, P parameters, InputStream inputStream, ContentType contentType)
     {
         Assert.state(!StringUtils.isEmpty(userName), "Expected a non-empty userName!");
         Assert.state(filePath != null, "Expected a non-null path!");
         
         checkParameters(parameters);
-        checkBody(inputStream);
+        checkBody(inputStream, contentType);
         
         filePath = this.resolvePath(userName, filePath);
         
@@ -161,14 +198,14 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         return reqBuilder.build();
     }
 
-    protected HttpUriRequest _requestForPath(
+    private HttpUriRequest _requestForPath(
         String userName, String filePath, P parameters, byte[] data, ContentType contentType)
     {
         Assert.state(!StringUtils.isEmpty(userName), "Expected a non-empty userName!");
         Assert.state(filePath != null, "Expected a non-null path!");
         
         checkParameters(parameters);
-        checkBody(data);
+        checkBody(data, contentType);
         
         filePath = this.resolvePath(userName, filePath);
         
@@ -220,10 +257,26 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     
     @Override
     public HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath,
+        @NotNull InputStream inputStream)
+    {
+        return _requestForPath(userName, filePath, (P) null, inputStream, this.defaultContentType());
+    }
+    
+    @Override
+    public HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull InputStream inputStream, @NotNull ContentType contentType)
     {
         return _requestForPath(userName, filePath, parameters, inputStream, contentType);
+    }
+    
+    @Override
+    public HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
+        @NotNull InputStream inputStream)
+    {
+        return _requestForPath(userName, filePath, parameters, inputStream, this.defaultContentType());
     }
     
     @Override
@@ -235,10 +288,27 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     }
     
     @Override
+    public HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath, 
+        @NotNull byte[] data)
+    {
+        return _requestForPath(userName, filePath, (P) null, data, this.defaultContentType());
+    }
+    
+    @Override
     public HttpUriRequest requestForPath(@NotEmpty String userName,
         @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull byte[] data, @NotNull ContentType contentType)
     {
         return _requestForPath(userName, filePath, parameters, data, contentType);
     }
+    
+    @Override
+    public HttpUriRequest requestForPath(@NotEmpty String userName,
+        @NotNull @FilePath String filePath, @Valid P parameters, 
+        @NotNull byte[] data)
+    {
+        return _requestForPath(userName, filePath, parameters, data, this.defaultContentType());
+    }
+    
 }
