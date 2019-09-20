@@ -33,7 +33,10 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
     String methodName();
     
     /**
-     * Parse the response entity to a DTO object
+     * Parse the response entity to a DTO object.
+     * 
+     * <p>Note: This method is meaningful only for REST-like operations returning objects
+     * (and not for operations like <tt>OPEN</tt> returning a binary stream of data). 
      * 
      * @param e The HTTP response entity (never is <tt>null</tt>, even when it carries 
      *   a zero-length body)

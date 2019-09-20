@@ -20,6 +20,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -47,6 +48,7 @@ import gr.helix.httpfsproxy.model.ops.GetFileChecksumResponse;
 import gr.helix.httpfsproxy.model.ops.GetHomeDirectoryResponse;
 import gr.helix.httpfsproxy.model.ops.ListStatusResponse;
 import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
+import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 import gr.helix.httpfsproxy.service.OperationTemplate;
 
@@ -106,6 +108,10 @@ public class OperationTemplateTests
     @Autowired
     @Qualifier("getFileChecksumTemplate")
     private OperationTemplate<VoidRequestParameters, GetFileChecksumResponse> getFileChecksumTemplate;
+    
+    @Autowired
+    @Qualifier("readFileTemplate")
+    private OperationTemplate<ReadFileRequestParameters, ?> readFileTemplate;
     
     private String userName;
     
@@ -267,6 +273,25 @@ public class OperationTemplateTests
         return r.getChecksum();
     }
     
+    private String readTextFile(String path) throws IOException
+    {
+        HttpUriRequest request = readFileTemplate.requestForPath(userName, path);
+        System.err.println(" * " + request);
+        
+        String text = null;
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            final HttpEntity e = response.getEntity();
+            assertNotNull(e);
+            final ContentType t = ContentType.getOrDefault(e);
+            assertEquals(ContentType.APPLICATION_OCTET_STREAM.getMimeType(), t.getMimeType());
+            text = IOUtils.toString(e.getContent(), Charset.forName("UTF-8"));
+        }
+        
+        return text;
+    }
+    
     //
     // Tests
     //
@@ -396,5 +421,13 @@ public class OperationTemplateTests
     {
         String path = StringUtils.applyRelativePath(tempDir, "i-dont-exist.txt");
         appendToNonExistingFile(path, textData1.getBytes());
+    }
+    
+    @Test // Note: must run after test4a_d1_createTextInTempDirectory
+    public void test6a_d1_readText() throws IOException
+    {
+        String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
+        String textData = readTextFile(path);
+        assertEquals(textData1, textData);
     }
 }
