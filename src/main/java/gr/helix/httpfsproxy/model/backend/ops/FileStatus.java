@@ -83,7 +83,7 @@ public class FileStatus
     @NotNull
     @Min(0)
     @JsonProperty("replication")
-    Integer replication;
+    Short replication;
     
     /**
      * The link target of a symlink (if current file is a symlink)

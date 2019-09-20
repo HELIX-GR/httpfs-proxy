@@ -5,6 +5,9 @@ import java.util.regex.Pattern;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+
 /**
  * Validate simple Unix-style file paths. 
  * <p>Accepts only name components that contain characters from: the alphanumeric set, 

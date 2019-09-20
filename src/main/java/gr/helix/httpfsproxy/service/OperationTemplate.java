@@ -21,7 +21,7 @@ import gr.helix.httpfsproxy.validation.FilePath;
  * A template for operations on the HttpFs backend
  * 
  * @param <P> The type for request parameters
- * @param <R> The type for response
+ * @param <R> The type for response (DTO)
  */
 public interface OperationTemplate <P extends BaseRequestParameters, R>
 {
@@ -33,9 +33,10 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
     String methodName();
     
     /**
-     * Parse the response entity
+     * Parse the response entity to a DTO object
      * 
-     * @param e
+     * @param e The HTTP response entity (never is <tt>null</tt>, even when it carries 
+     *   a zero-length body)
      */
     R responseFromHttpEntity(@NotNull HttpEntity e) 
         throws JsonProcessingException, IOException;
@@ -50,7 +51,6 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
     HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters);
     
-    
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
      * 
@@ -64,6 +64,13 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
     HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull InputStream in, @NotNull ContentType contentType);
+    
+    default HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
+        @NotNull InputStream in)
+    {
+        return requestForPath(userName, filePath, parameters, in, ContentType.APPLICATION_OCTET_STREAM);
+    }
     
     /**
      * Build a {@link HttpUriRequest} for an operation on given path (no extra parameters)
@@ -81,6 +88,13 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
         @NotEmpty String userName, @NotNull @FilePath String filePath,
         @NotNull InputStream in, @NotNull ContentType contentType);
     
+    default HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath,
+        @NotNull InputStream in)
+    {
+        return requestForPath(userName, filePath, in, ContentType.APPLICATION_OCTET_STREAM);
+    }
+    
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
      * @see {@link OperationTemplate#requestForPath(String, String, InputStream, ContentType)}
@@ -89,6 +103,13 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
         @NotEmpty String userName, @NotNull @FilePath String filePath,
         @NotNull byte[] data, @NotNull ContentType contentType);
     
+    default HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath,
+        @NotNull byte[] data)
+    {
+        return requestForPath(userName, filePath, data, ContentType.APPLICATION_OCTET_STREAM);
+    }
+    
     /**
      * Build a {@link HttpUriRequest} carrying a request entity for an operation on given path.
      * @see {@link OperationTemplate#requestForPath(String, String, BaseRequestParameters, InputStream, ContentType)}
@@ -96,4 +117,11 @@ public interface OperationTemplate <P extends BaseRequestParameters, R>
     HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull byte[] data, @NotNull ContentType contentType);
+    
+    default HttpUriRequest requestForPath(
+        @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
+        @NotNull byte[] data)
+    {
+        return requestForPath(userName, filePath, parameters, data, ContentType.APPLICATION_OCTET_STREAM);
+    }
 }

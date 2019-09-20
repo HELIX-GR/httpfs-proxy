@@ -1,11 +1,9 @@
 package gr.helix.httpfsproxy.service;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Random;
@@ -15,7 +13,6 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
-import org.apache.commons.io.FilenameUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
@@ -44,6 +41,9 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     protected final static String PARAMETERS_REQUIRED_MESSAGE_FORMAT = 
         "This operation (%s) requires parameters";
     
+    protected final static String BODY_REQUIRED_MESSAGE_FORMAT = 
+        "This operation (%s) requires a request body";
+    
     @Autowired
     protected ObjectMapper objectMapper;
     
@@ -53,13 +53,13 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     @Autowired
     protected HttpFsServiceConfiguration backend;
     
-    protected final Pattern filenamePattern = Pattern.compile("^[-.0-9\\w]+$"); 
-    
     protected final Random random = new Random();
       
     protected abstract Class<R> responseType();
     
     protected abstract boolean requireParameters();
+    
+    protected boolean requireBody() { return false; }
     
     /**
      * Choose a backend (as a base URI) to communicate with.
@@ -132,6 +132,14 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         }
     }
     
+    protected <B> void checkBody(B body)
+    {
+        if (body == null && this.requireBody()) {
+            throw new IllegalStateException(
+                String.format(BODY_REQUIRED_MESSAGE_FORMAT, this.operation()));
+        }
+    }
+    
     protected HttpUriRequest _requestForPath(
         String userName, String filePath, P parameters, InputStream inputStream, ContentType contentType)
     {
@@ -139,6 +147,8 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         Assert.state(filePath != null, "Expected a non-null path!");
         
         checkParameters(parameters);
+        checkBody(inputStream);
+        
         filePath = this.resolvePath(userName, filePath);
         
         final URI uri = this.uriForPath(this.baseUri(), userName, filePath, parameters);
@@ -158,6 +168,8 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         Assert.state(filePath != null, "Expected a non-null path!");
         
         checkParameters(parameters);
+        checkBody(data);
+        
         filePath = this.resolvePath(userName, filePath);
         
         final URI uri = this.uriForPath(this.baseUri(), userName, filePath, parameters);
@@ -178,7 +190,6 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     public R responseFromHttpEntity(@NotNull HttpEntity e) 
         throws JsonProcessingException, IOException
     {
-        Assert.notNull(e, "Expected a non-null HTTP entity");
         Assert.state(e.getContentType() != null, "Expected to find a content-type header");
         Assert.state("application/json".equals(e.getContentType().getValue()), 
             "Expected content encoded as JSON (application/json)");

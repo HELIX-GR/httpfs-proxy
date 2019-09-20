@@ -11,13 +11,17 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.not;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
@@ -31,18 +35,22 @@ import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.io.Resource;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.util.StringUtils;
 
 import com.google.common.base.CaseFormat;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.model.backend.VoidRequestParameters;
 import gr.helix.httpfsproxy.model.backend.ops.BooleanResponse;
+import gr.helix.httpfsproxy.model.backend.ops.CreateFileRequestParameters;
 import gr.helix.httpfsproxy.model.backend.ops.FileStatus;
 import gr.helix.httpfsproxy.model.backend.ops.GetHomeDirectoryResponse;
 import gr.helix.httpfsproxy.model.backend.ops.ListStatusResponse;
@@ -63,7 +71,7 @@ public class OperationTemplateTests
         @Bean("tempDir")
         String tempDir()
         {
-            return String.format("httpfsproxy-tests-%s-%06d",
+            return String.format("httpfsproxy-tests-%s-%06d/",
                 Instant.now().toEpochMilli(), random.nextInt(100000));
         }
     }
@@ -94,7 +102,21 @@ public class OperationTemplateTests
     @Qualifier("makeDirectoryTemplate")
     private OperationTemplate<MakeDirectoryRequestParameters, BooleanResponse> makeDirectoryTemplate;
     
+    @Autowired
+    @Qualifier("createFileTemplate")
+    private OperationTemplate<CreateFileRequestParameters, Void> createFileTemplate;
+    
     private String userName;
+    
+    private final String textData1 = 
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor\n" +
+        "incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation\n" +
+        "ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit\n" +
+        "in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat\n" +
+        "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+    
+    @Value("classpath:samples/text/Aesop.txt")
+    Resource textResource1;
     
     @PostConstruct
     private void setup()
@@ -140,6 +162,31 @@ public class OperationTemplateTests
         }
         
         return r.getFlag();
+    }
+    
+    void createFileInDirectory(String dirPath, String filename, Object data) throws IOException
+    {
+        final String path = StringUtils.applyRelativePath(dirPath, filename);
+        
+        final CreateFileRequestParameters parameters = new CreateFileRequestParameters();
+        parameters.setPermission("644");
+        parameters.setOverwrite(true);
+        
+        HttpUriRequest request = null; 
+        if (data instanceof InputStream) 
+            request = createFileTemplate.requestForPath(userName, path, parameters, (InputStream) data);
+        else if (data instanceof byte[])
+            request = createFileTemplate.requestForPath(userName, path, parameters, (byte[]) data);
+        else 
+            fail("unexpected data of type: " + data.getClass().getName());
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_CREATED, responseStatus.getStatusCode());
+            HttpEntity e = response.getEntity();
+            assertNotNull(e);
+            assertNull(createFileTemplate.responseFromHttpEntity(e));
+        }
     }
     
     //
@@ -190,14 +237,33 @@ public class OperationTemplateTests
     }
     
     @Test
-    public void test4_createTextInTempDirectory() throws IOException
-    {
-        fail("Not implemented yet");
+    public void test4a_d1_createTextInTempDirectory() throws IOException
+    {        
+        createFileInDirectory(tempDir, "data1-a.txt", textData1.getBytes());
     }
     
     @Test
-    public void test4_appendTextInTempDirectory() throws IOException
-    {
-        fail("Not implemented yet");
+    public void test4a_r1_createTextInTempDirectory() throws IOException
+    {        
+        String text = null;
+        try (InputStream in = textResource1.getInputStream()) { 
+            text = IOUtils.toString(in, Charset.forName("UTF-8"));
+        }
+        createFileInDirectory(tempDir, "res1-a.txt", text.getBytes());
+    }
+    
+    @Test
+    public void test4b_d1_createTextInTempDirectory() throws IOException
+    {        
+        ByteArrayInputStream in = new ByteArrayInputStream(textData1.getBytes());
+        createFileInDirectory(tempDir, "data1-b.txt", in);
+    }
+    
+    @Test
+    public void test4b_r1_createTextInTempDirectory() throws IOException
+    {        
+        try (InputStream in = textResource1.getInputStream()) { 
+            createFileInDirectory(tempDir, "res1-b.txt", in);
+        }
     }
 }
