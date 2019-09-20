@@ -1,15 +1,15 @@
-package gr.helix.httpfsproxy.model.backend.ops;
+package gr.helix.httpfsproxy.model.ops;
 
 import javax.validation.constraints.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import gr.helix.httpfsproxy.model.backend.BaseRequestParameters;
 
 @lombok.Data
 @lombok.EqualsAndHashCode(callSuper = false)
 @lombok.AllArgsConstructor
 @lombok.NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class MakeDirectoryRequestParameters extends BaseRequestParameters
 {
     @JsonProperty("permission")

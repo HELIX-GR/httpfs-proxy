@@ -1,4 +1,4 @@
-package gr.helix.httpfsproxy.model.backend.ops;
+package gr.helix.httpfsproxy.model.ops;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

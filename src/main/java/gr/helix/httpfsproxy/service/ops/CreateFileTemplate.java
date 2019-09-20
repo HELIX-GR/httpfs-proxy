@@ -16,8 +16,8 @@ import org.springframework.validation.annotation.Validated;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import gr.helix.httpfsproxy.model.backend.EnumOperation;
-import gr.helix.httpfsproxy.model.backend.ops.CreateFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.EnumOperation;
 import gr.helix.httpfsproxy.service.AbstractPutOperationTemplate;
 import gr.helix.httpfsproxy.validation.FilePath;
 

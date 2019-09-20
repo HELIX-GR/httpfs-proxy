@@ -3,9 +3,9 @@ package gr.helix.httpfsproxy.service.ops;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import gr.helix.httpfsproxy.model.backend.EnumOperation;
-import gr.helix.httpfsproxy.model.backend.ops.BooleanResponse;
-import gr.helix.httpfsproxy.model.backend.ops.RenameRequestParameters;
+import gr.helix.httpfsproxy.model.ops.BooleanResponse;
+import gr.helix.httpfsproxy.model.ops.EnumOperation;
+import gr.helix.httpfsproxy.model.ops.RenameRequestParameters;
 import gr.helix.httpfsproxy.service.AbstractPutOperationTemplate;
 
 @Service("renameTemplate")

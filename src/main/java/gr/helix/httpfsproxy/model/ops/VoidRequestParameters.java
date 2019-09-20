@@ -1,4 +1,4 @@
-package gr.helix.httpfsproxy.model.backend;
+package gr.helix.httpfsproxy.model.ops;
 
 public final class VoidRequestParameters extends BaseRequestParameters 
 {

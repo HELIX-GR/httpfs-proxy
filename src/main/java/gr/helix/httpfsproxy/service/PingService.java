@@ -22,10 +22,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
-import gr.helix.httpfsproxy.model.backend.ServiceStatus;
-import gr.helix.httpfsproxy.model.backend.ServiceStatusReport;
-import gr.helix.httpfsproxy.model.backend.VoidRequestParameters;
-import gr.helix.httpfsproxy.model.backend.ops.GetHomeDirectoryResponse;
+import gr.helix.httpfsproxy.model.ServiceStatus;
+import gr.helix.httpfsproxy.model.ServiceStatusReport;
+import gr.helix.httpfsproxy.model.ops.GetHomeDirectoryResponse;
+import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 
 @Service
 @ConditionalOnProperty(prefix = "gr.helix.httpfsproxy", name = "ping-backend")

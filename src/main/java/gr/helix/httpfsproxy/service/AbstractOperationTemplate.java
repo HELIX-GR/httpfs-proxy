@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
-import gr.helix.httpfsproxy.model.backend.BaseRequestParameters;
+import gr.helix.httpfsproxy.model.ops.BaseRequestParameters;
 import gr.helix.httpfsproxy.validation.FilePath;
 
 public abstract class AbstractOperationTemplate <P extends BaseRequestParameters, R> implements OperationTemplate<P, R>

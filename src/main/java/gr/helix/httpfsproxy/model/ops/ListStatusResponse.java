@@ -1,4 +1,4 @@
-package gr.helix.httpfsproxy.model.backend.ops;
+package gr.helix.httpfsproxy.model.ops;
 
 import java.util.Collections;
 import java.util.List;

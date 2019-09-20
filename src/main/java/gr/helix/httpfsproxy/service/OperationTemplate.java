@@ -13,8 +13,8 @@ import org.apache.http.entity.ContentType;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import gr.helix.httpfsproxy.model.backend.BaseRequestParameters;
-import gr.helix.httpfsproxy.model.backend.EnumOperation;
+import gr.helix.httpfsproxy.model.ops.BaseRequestParameters;
+import gr.helix.httpfsproxy.model.ops.EnumOperation;
 import gr.helix.httpfsproxy.validation.FilePath;
 
 /**

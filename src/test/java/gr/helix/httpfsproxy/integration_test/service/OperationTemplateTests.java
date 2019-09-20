@@ -48,13 +48,13 @@ import org.springframework.util.StringUtils;
 import com.google.common.base.CaseFormat;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
-import gr.helix.httpfsproxy.model.backend.VoidRequestParameters;
-import gr.helix.httpfsproxy.model.backend.ops.BooleanResponse;
-import gr.helix.httpfsproxy.model.backend.ops.CreateFileRequestParameters;
-import gr.helix.httpfsproxy.model.backend.ops.FileStatus;
-import gr.helix.httpfsproxy.model.backend.ops.GetHomeDirectoryResponse;
-import gr.helix.httpfsproxy.model.backend.ops.ListStatusResponse;
-import gr.helix.httpfsproxy.model.backend.ops.MakeDirectoryRequestParameters;
+import gr.helix.httpfsproxy.model.ops.BooleanResponse;
+import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.FileStatus;
+import gr.helix.httpfsproxy.model.ops.GetHomeDirectoryResponse;
+import gr.helix.httpfsproxy.model.ops.ListStatusResponse;
+import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
+import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 import gr.helix.httpfsproxy.service.OperationTemplate;
 
 @RunWith(SpringRunner.class)

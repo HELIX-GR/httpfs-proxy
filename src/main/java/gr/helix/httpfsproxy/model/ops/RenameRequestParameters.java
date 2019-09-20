@@ -1,10 +1,9 @@
-package gr.helix.httpfsproxy.model.backend.ops;
+package gr.helix.httpfsproxy.model.ops;
 
 import javax.validation.constraints.NotEmpty;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import gr.helix.httpfsproxy.model.backend.BaseRequestParameters;
 import gr.helix.httpfsproxy.validation.FilePath;
 
 @lombok.Data

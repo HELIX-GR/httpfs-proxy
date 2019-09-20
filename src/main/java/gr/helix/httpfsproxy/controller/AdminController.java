@@ -27,9 +27,9 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import gr.helix.httpfsproxy.domain.UserEntity;
+import gr.helix.httpfsproxy.model.ServiceStatusReport;
 import gr.helix.httpfsproxy.model.UserForm;
 import gr.helix.httpfsproxy.model.UserInfo;
-import gr.helix.httpfsproxy.model.backend.ServiceStatusReport;
 import gr.helix.httpfsproxy.repository.UserRepository;
 import gr.helix.httpfsproxy.service.PingService;
 
