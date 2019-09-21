@@ -12,7 +12,7 @@ import javax.validation.Constraint;
 @Documented
 @Constraint(validatedBy = { SimpleFilePathValidator.class })
 @Retention(RUNTIME)
-@Target({ FIELD, METHOD, PARAMETER, TYPE_USE})
+@Target({ FIELD, METHOD, PARAMETER, TYPE_USE })
 public @interface FilePath
 {
     String message() default "invalid file path: [${validatedValue}]";

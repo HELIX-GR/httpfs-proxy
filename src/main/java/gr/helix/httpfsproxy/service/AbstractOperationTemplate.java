@@ -72,6 +72,13 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
      */
     protected boolean requireBody() { return false; }
     
+    /**
+     * Provide an object of default parameters to be used when parameters are not given 
+     * (in {@link #requestForPath}).
+     * 
+     * <p>Note that this default object is meaningful only if parameters are not required
+     * (see {@link #requireParameters()}) 
+     */
     protected P defaultParameters() { return null; };
     
     /**

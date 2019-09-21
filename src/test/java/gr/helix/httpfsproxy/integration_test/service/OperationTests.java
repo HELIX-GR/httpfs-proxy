@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -41,6 +42,7 @@ import org.springframework.util.StringUtils;
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.model.ops.AppendToFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.BooleanResponse;
+import gr.helix.httpfsproxy.model.ops.ConcatenateFilesRequestParameters;
 import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.FileChecksum;
 import gr.helix.httpfsproxy.model.ops.FileStatus;
@@ -56,7 +58,7 @@ import gr.helix.httpfsproxy.service.OperationTemplate;
 @SpringBootTest
 @ActiveProfiles({"testing"})
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class OperationTemplateTests
+public class OperationTests
 {
     @TestConfiguration
     static class Setup
@@ -112,6 +114,10 @@ public class OperationTemplateTests
     @Autowired
     @Qualifier("readFileTemplate")
     private OperationTemplate<ReadFileRequestParameters, ?> readFileTemplate;
+    
+    @Autowired
+    @Qualifier("concatenateFilesTemplate")
+    private OperationTemplate<ConcatenateFilesRequestParameters, Void> concatenateFilesTemplate;
     
     private String userName;
     
@@ -199,7 +205,7 @@ public class OperationTemplateTests
         
         final CreateFileRequestParameters parameters = new CreateFileRequestParameters();
         parameters.setPermission("644");
-        parameters.setOverwrite(true);
+        parameters.setOverwrite(false);
         
         HttpUriRequest request = null; 
         if (data instanceof InputStream) 
@@ -290,6 +296,25 @@ public class OperationTemplateTests
         }
         
         return text;
+    }
+    
+    private String concatenateFiles(String path, String ...sourcePaths) throws IOException
+    {
+        ConcatenateFilesRequestParameters parameters = new ConcatenateFilesRequestParameters();
+        parameters.setSources(Arrays.asList(sourcePaths));
+        
+        HttpUriRequest request =  concatenateFilesTemplate.requestForPath(userName, path, parameters);
+        System.err.println(" * " + request);
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            final HttpEntity e = response.getEntity();
+            assertNotNull(e);
+            assertNull(concatenateFilesTemplate.responseFromHttpEntity(e));
+        }
+        
+        return path;
     }
     
     //
@@ -429,5 +454,58 @@ public class OperationTemplateTests
         String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
         String textData = readTextFile(path);
         assertEquals(textData1, textData);
+    }
+    
+    @Test // Note: must run after test4a_d2_createTextInTempDirectory
+    public void test6a_d2_readText() throws IOException
+    {
+        String path = StringUtils.applyRelativePath(tempDir, "data2-a.txt");
+        String textData = readTextFile(path);
+        assertEquals(textData2, textData);
+    }
+    
+    @Test // Note: must run after test4a_d3_createTextInTempDirectory
+    public void test6a_d3_readText() throws IOException
+    {
+        String path = StringUtils.applyRelativePath(tempDir, "data3-a.txt");
+        String textData = readTextFile(path);
+        
+        String expectedTextData = null;
+        try (InputStream in = textData3.getInputStream()) {
+            expectedTextData = IOUtils.toString(in, Charset.forName("UTF-8"));
+        }
+        assertEquals(expectedTextData, textData);
+    }
+    
+    @Test // Note: must run after test4a_d12_createTextInTempDirectory
+    public void test6a_d12_readText() throws IOException
+    {
+        String path = StringUtils.applyRelativePath(tempDir, "data12-a.txt");
+        String textData = readTextFile(path);
+        assertEquals(textData1 + textData2, textData);
+    }
+    
+    @Test
+    public void test7a_d1_concatenateTextFiles() throws IOException
+    {
+        String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", textData1.getBytes());
+        // CONCAT expects the destination path to exist: create an empty file
+        String path = createFileInDirectory(tempDir, "concat-data-1-a.txt", new byte[0]);
+        concatenateFiles(path, sourcePath1);
+        String textData = readTextFile(path);
+        assertEquals(textData1, textData);
+    }
+    
+    @Test
+    public void test7a_d12_concatenateTextFiles() throws IOException
+    {
+        String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", textData1.getBytes());
+        String sourcePath2 = createFileInDirectory(tempDir, "data-part-2.txt", textData2.getBytes());
+        // CONCAT expects the destination path to exist: create an empty file
+        String path = createFileInDirectory(tempDir, "concat-data-1-2-a.txt", new byte[0]);
+        concatenateFiles(path, sourcePath1, sourcePath2);
+        String textData = readTextFile(path);
+        String expectedTextData = textData1 + textData2;
+        assertEquals(expectedTextData, textData);
     }
 }
