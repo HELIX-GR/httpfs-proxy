@@ -47,6 +47,7 @@ import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.FileChecksum;
 import gr.helix.httpfsproxy.model.ops.FileStatus;
 import gr.helix.httpfsproxy.model.ops.GetFileChecksumResponse;
+import gr.helix.httpfsproxy.model.ops.GetFileStatusResponse;
 import gr.helix.httpfsproxy.model.ops.GetHomeDirectoryResponse;
 import gr.helix.httpfsproxy.model.ops.ListStatusResponse;
 import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
@@ -94,6 +95,10 @@ public class OperationTests
     @Autowired
     @Qualifier("listStatusTemplate")
     private OperationTemplate<VoidRequestParameters, ListStatusResponse > listStatusTemplate;
+    
+    @Autowired
+    @Qualifier("getFileStatusTemplate")
+    private OperationTemplate<VoidRequestParameters, GetFileStatusResponse> getFileStatusTemplate;
     
     @Autowired
     @Qualifier("makeDirectoryTemplate")
@@ -171,10 +176,28 @@ public class OperationTests
             r = listStatusTemplate.responseFromHttpEntity(e);
             assertNotNull(r);
             assertThat(r, hasProperty("statusList", notNullValue()));
-            
         }
         
         return r.getStatusList();
+    }
+
+    private FileStatus getFileStatus(String path) throws IOException
+    {
+        HttpUriRequest request = getFileStatusTemplate.requestForPath(userName, path);
+        System.err.println(" * " + request);
+        
+        GetFileStatusResponse r = null;
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            HttpEntity e = response.getEntity();
+            assertNotNull(e);
+            r = getFileStatusTemplate.responseFromHttpEntity(e);
+            assertNotNull(r);
+            assertThat(r, hasProperty("fileStatus", notNullValue()));
+        }
+        
+        return r.getFileStatus();
     }
     
     private boolean makeDirectory(String path, String permission) throws IOException
@@ -365,6 +388,15 @@ public class OperationTests
     }
     
     @Test
+    public void test3b_getStatusInTempDirectory() throws IOException
+    {
+        FileStatus r = getFileStatus(tempDir);
+        assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.DIRECTORY)));
+        assertThat(r, hasProperty("ownerName", equalTo(userName)));
+        assertThat(r, hasProperty("path", isEmptyString()));
+    }
+    
+    @Test
     public void test4a_d1_createTextInTempDirectory() throws IOException
     {        
         String path = createFileInDirectory(tempDir, "data1-a.txt", textData1.getBytes());
@@ -419,6 +451,35 @@ public class OperationTests
         }
         FileChecksum checksum = getFileChecksum(path);
         assertThat(checksum, hasProperty("checksumAsHexString", equalTo(checksumForTextData3)));
+    }
+    
+    @Test
+    public void test4z_listStatusInTempDirectory() throws IOException
+    {
+        List<FileStatus> r = listStatus(tempDir);
+        assertThat(r, not(empty()));
+    }
+    
+    @Test
+    public void test4za_d1_getFileStatus() throws IOException
+    {
+        FileStatus r = getFileStatus(StringUtils.applyRelativePath(tempDir, "data1-a.txt"));
+        assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.FILE)));
+        assertThat(r, hasProperty("ownerName", equalTo(userName)));
+        assertThat(r, hasProperty("path", isEmptyString()));
+        assertThat(r, hasProperty("length", equalTo(Long.valueOf(textData1.length()))));
+        assertThat(r, hasProperty("replication", greaterThanOrEqualTo(2)));
+    }
+    
+    @Test
+    public void test4za_d2_getFileStatus() throws IOException
+    {
+        FileStatus r = getFileStatus(StringUtils.applyRelativePath(tempDir, "data2-a.txt"));
+        assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.FILE)));
+        assertThat(r, hasProperty("ownerName", equalTo(userName)));
+        assertThat(r, hasProperty("path", isEmptyString()));
+        assertThat(r, hasProperty("length", equalTo(Long.valueOf(textData2.length()))));
+        assertThat(r, hasProperty("replication", greaterThanOrEqualTo(2)));
     }
     
     @Test 
@@ -508,4 +569,6 @@ public class OperationTests
         String expectedTextData = textData1 + textData2;
         assertEquals(expectedTextData, textData);
     }
+    
+    
 }

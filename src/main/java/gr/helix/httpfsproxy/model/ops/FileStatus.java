@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @lombok.Data
 public class FileStatus
 {
-    enum EnumType {
+    public enum EnumType {
         FILE, 
         DIRECTORY, 
         SYMLINK
@@ -83,7 +83,7 @@ public class FileStatus
     @NotNull
     @Min(0)
     @JsonProperty("replication")
-    Short replication;
+    Integer replication;
     
     /**
      * The link target of a symlink (if current file is a symlink)
