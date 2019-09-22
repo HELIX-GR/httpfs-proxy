@@ -43,6 +43,8 @@ import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.model.ops.AppendToFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.BooleanResponse;
 import gr.helix.httpfsproxy.model.ops.ConcatenateFilesRequestParameters;
+import gr.helix.httpfsproxy.model.ops.ContentSummary;
+import gr.helix.httpfsproxy.model.ops.ContentSummaryResponse;
 import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.DeleteFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.FileChecksum;
@@ -142,6 +144,10 @@ public class OperationTests
     @Autowired
     @Qualifier("deleteFileTemplate")
     private OperationTemplate<DeleteFileRequestParameters, BooleanResponse> deleteFileTemplate;
+    
+    @Autowired
+    @Qualifier("getContentSummaryTemplate")
+    private OperationTemplate<VoidRequestParameters, ContentSummaryResponse> getContentSummaryTemplate;
     
     private String userName;
     
@@ -439,12 +445,43 @@ public class OperationTests
         }
     }
     
+    private ContentSummary getSummary(String path) throws IOException
+    {
+        ContentSummaryResponse r = null;
+        HttpUriRequest request = getContentSummaryTemplate.requestForPath("user", path);
+        System.err.println(" * " + request);
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            final HttpEntity e = response.getEntity();
+            assertNotNull(e);
+            r = getContentSummaryTemplate.responseFromHttpEntity(e);
+            assertNotNull(r);
+            assertThat(r, hasProperty("summary", notNullValue()));
+        }
+        
+        return r.getSummary();
+    }
+    
+    private void getSummaryOfNonExistingPath(String path) throws IOException
+    {
+        ContentSummaryResponse r = null;
+        HttpUriRequest request = getContentSummaryTemplate.requestForPath("user", path);
+        System.err.println(" * " + request);
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_NOT_FOUND, responseStatus.getStatusCode());
+        }
+    }
+    
     //
     // Tests
     //
     
     @Test
-    public void test1_getHomeDirectory() throws IOException
+    public void test01a_getHomeDirectory() throws IOException
     {
         final HttpUriRequest request = getHomeDirectoryTemplate.requestForPath(userName, "/");
         
@@ -460,34 +497,34 @@ public class OperationTests
     }
     
     @Test
-    public void test2a_listStatusInHomeDirectory() throws IOException
+    public void test02a_listStatusInHomeDirectory() throws IOException
     {
         List<FileStatus> r = listStatus("");
         assertThat(r, not(empty()));
     }
     
     @Test
-    public void test2b_listStatusInRootDirectory() throws IOException
+    public void test02b_listStatusInRootDirectory() throws IOException
     {
         List<FileStatus> r = listStatus("/");
         assertThat(r, not(empty()));
     }
     
     @Test
-    public void test3_makeTempDirectory() throws IOException
+    public void test03a_makeTempDirectory() throws IOException
     {
         makeDirectory(tempDir, "755");
     }
     
     @Test
-    public void test3a_listStatusInTempDirectory() throws IOException
+    public void test03b_listStatusInTempDirectory() throws IOException
     {
         List<FileStatus> r = listStatus(tempDir);
         assertThat(r, empty());
     }
     
     @Test
-    public void test3b_getStatusInTempDirectory() throws IOException
+    public void test03c_getStatusInTempDirectory() throws IOException
     {
         FileStatus r = getFileStatus(tempDir);
         assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.DIRECTORY)));
@@ -496,7 +533,7 @@ public class OperationTests
     }
     
     @Test
-    public void test4a_d1_createTextInTempDirectory() throws IOException
+    public void test04a_d1_createTextInTempDirectory() throws IOException
     {        
         String path = createFileInDirectory(tempDir, "data1-a.txt", textData1.getBytes());
         FileChecksum checksum = getFileChecksum(path);
@@ -504,7 +541,7 @@ public class OperationTests
     }
     
     @Test
-    public void test4a_d2_createTextInTempDirectory() throws IOException
+    public void test04a_d2_createTextInTempDirectory() throws IOException
     {        
         String path = createFileInDirectory(tempDir, "data2-a.txt", textData2.getBytes());
         FileChecksum checksum = getFileChecksum(path);
@@ -512,7 +549,7 @@ public class OperationTests
     }
     
     @Test
-    public void test4a_d3_createTextInTempDirectory() throws IOException
+    public void test04a_d3_createTextInTempDirectory() throws IOException
     {        
         String text = null;
         try (InputStream in = textData3.getInputStream()) { 
@@ -524,7 +561,7 @@ public class OperationTests
     }
     
     @Test
-    public void test4b_d1_createTextInTempDirectory() throws IOException
+    public void test04b_d1_createTextInTempDirectory() throws IOException
     {        
         ByteArrayInputStream in = new ByteArrayInputStream(textData1.getBytes());
         String path = createFileInDirectory(tempDir, "data1-b.txt", in);
@@ -533,7 +570,7 @@ public class OperationTests
     }
     
     @Test
-    public void test4b_d2_createTextInTempDirectory() throws IOException
+    public void test04b_d2_createTextInTempDirectory() throws IOException
     {        
         ByteArrayInputStream in = new ByteArrayInputStream(textData2.getBytes());
         String path = createFileInDirectory(tempDir, "data2-b.txt", in);
@@ -542,7 +579,7 @@ public class OperationTests
     }
  
     @Test
-    public void test4b_d3_createTextInTempDirectory() throws IOException
+    public void test04b_d3_createTextInTempDirectory() throws IOException
     {   
         String path = null;
         try (InputStream in = textData3.getInputStream()) { 
@@ -553,14 +590,14 @@ public class OperationTests
     }
     
     @Test
-    public void test4z_listStatusInTempDirectory() throws IOException
+    public void test04z_listStatusInTempDirectory() throws IOException
     {
         List<FileStatus> r = listStatus(tempDir);
         assertThat(r, not(empty()));
     }
     
     @Test
-    public void test4za_d1_getFileStatus() throws IOException
+    public void test04z_d1_getFileStatus() throws IOException
     {
         FileStatus r = getFileStatus(StringUtils.applyRelativePath(tempDir, "data1-a.txt"));
         assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.FILE)));
@@ -571,7 +608,7 @@ public class OperationTests
     }
     
     @Test
-    public void test4za_d2_getFileStatus() throws IOException
+    public void test04z_d2_getFileStatus() throws IOException
     {
         FileStatus r = getFileStatus(StringUtils.applyRelativePath(tempDir, "data2-a.txt"));
         assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.FILE)));
@@ -582,13 +619,13 @@ public class OperationTests
     }
     
     @Test
-    public void test4z_getFileStatusOfNonExistingFile() throws IOException
+    public void test04z_getFileStatusOfNonExistingFile() throws IOException
     {
         getFileStatusOfNonExisitingFile(StringUtils.applyRelativePath(tempDir, "i-dont-exist.txt"));
     }
     
     @Test 
-    public void test5a_d12_appendTextToFile() throws IOException
+    public void test05a_d12_appendTextToFile() throws IOException
     {
         String name = "data12-a.txt";
         String path = createFileInDirectory(tempDir, name, textData1.getBytes());
@@ -596,7 +633,7 @@ public class OperationTests
     }
     
     @Test 
-    public void test5b_d12_appendTextToFile() throws IOException
+    public void test05b_d12_appendTextToFile() throws IOException
     {
         String name = "data12-b.txt";
         ByteArrayInputStream in1 = new ByteArrayInputStream(textData1.getBytes());
@@ -608,14 +645,14 @@ public class OperationTests
     }
     
     @Test 
-    public void test5_appendTextToNonExistingFile() throws IOException
+    public void test05z_appendTextToNonExistingFile() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "i-dont-exist.txt");
         appendToNonExistingFile(path, textData1.getBytes());
     }
     
     @Test // Note: must run after test4a_d1_createTextInTempDirectory
-    public void test6a_d1_readText() throws IOException
+    public void test06a_d1_readText() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
         String textData = readTextFile(path);
@@ -623,7 +660,7 @@ public class OperationTests
     }
     
     @Test // Note: must run after test4a_d2_createTextInTempDirectory
-    public void test6a_d2_readText() throws IOException
+    public void test06a_d2_readText() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "data2-a.txt");
         String textData = readTextFile(path);
@@ -631,7 +668,7 @@ public class OperationTests
     }
     
     @Test // Note: must run after test4a_d3_createTextInTempDirectory
-    public void test6a_d3_readText() throws IOException
+    public void test06a_d3_readText() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "data3-a.txt");
         String textData = readTextFile(path);
@@ -644,7 +681,7 @@ public class OperationTests
     }
     
     @Test // Note: must run after test4a_d12_createTextInTempDirectory
-    public void test6a_d12_readText() throws IOException
+    public void test06a_d12_readText() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "data12-a.txt");
         String textData = readTextFile(path);
@@ -652,7 +689,7 @@ public class OperationTests
     }
     
     @Test
-    public void test7a_d1_concatenateTextFiles() throws IOException
+    public void test07a_d1_concatenateTextFiles() throws IOException
     {
         String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", textData1.getBytes());
         // CONCAT expects the destination path to exist: create an empty file
@@ -663,7 +700,7 @@ public class OperationTests
     }
     
     @Test
-    public void test7a_d12_concatenateTextFiles() throws IOException
+    public void test07a_d12_concatenateTextFiles() throws IOException
     {
         String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", textData1.getBytes());
         String sourcePath2 = createFileInDirectory(tempDir, "data-part-2.txt", textData2.getBytes());
@@ -676,7 +713,7 @@ public class OperationTests
     }
     
     @Test
-    public void test8a_d1_truncateFile() throws IOException
+    public void test08a_d1_truncateFile() throws IOException
     {
         String path = createFileInDirectory(tempDir, "data1-a-to-be-truncated.txt", textData1.getBytes());
         FileStatus st0 = getFileStatus(path);
@@ -688,7 +725,7 @@ public class OperationTests
     }
     
     @Test
-    public void test9a_d1_deleteFile() throws IOException
+    public void test09a_d1_deleteFile() throws IOException
     {
         String path = createFileInDirectory(tempDir, "data1-a-to-be-deleted.txt", textData1.getBytes());
         getFileStatus(path);
@@ -697,7 +734,7 @@ public class OperationTests
     }
     
     @Test
-    public void test9_deleteNonEmptyDirectory() throws IOException
+    public void test09z_deleteNonEmptyDirectory() throws IOException
     {
         String dirName = String.format("sub-%05d", random.nextInt(100000));
         String dirPath = StringUtils.applyRelativePath(tempDir, dirName) + "/";
@@ -707,12 +744,28 @@ public class OperationTests
     }
     
     @Test
-    public void test9_deleteRecursiveNonEmptyDirectory() throws IOException
+    public void test09z_deleteRecursiveNonEmptyDirectory() throws IOException
     {
         String dirName = String.format("sub-%05d", random.nextInt(100000));
         String dirPath = StringUtils.applyRelativePath(tempDir, dirName) + "/";
         makeDirectory(dirPath, "775");
         createFileInDirectory(dirPath, "timestamp", new byte[0]);
         deleteRecursiveNonEmptyDirectory(dirPath);
+    }
+    
+    @Test // Note: must run after test04* tests that create content inside temporary directory
+    public void test10a_getSummaryInTempDirectory() throws IOException
+    {
+        ContentSummary summary = getSummary(tempDir);
+        assertThat(summary, hasProperty("fileCount", greaterThan(0)));
+        assertThat(summary, hasProperty("directoryCount", greaterThan(0)));
+        assertThat(summary, hasProperty("length", greaterThan(0L)));
+        assertThat(summary, hasProperty("spaceConsumed", greaterThan(0L)));
+    }
+    
+    @Test
+    public void test10b_getSummaryOfNonExistingDirectory() throws IOException
+    {
+        getSummaryOfNonExistingPath(StringUtils.applyRelativePath(tempDir, "i-dont-exist"));
     }
 }
