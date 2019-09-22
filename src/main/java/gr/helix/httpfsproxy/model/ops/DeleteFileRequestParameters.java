@@ -21,7 +21,7 @@ public class DeleteFileRequestParameters extends BaseRequestParameters
         new DeleteFileRequestParameters(true);
     
     @JsonCreator
-    public static DeleteFileRequestParameters create(@JsonProperty("recursive") boolean recursive)
+    public static DeleteFileRequestParameters of(@JsonProperty("recursive") boolean recursive)
     {
         return recursive? PARAMETERS_FOR_RECURSIVE_DELETE : PARAMETERS_FOR_NON_RECURSIVE_DELETE;
     }

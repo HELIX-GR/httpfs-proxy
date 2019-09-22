@@ -40,6 +40,8 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.util.StringUtils;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
+import gr.helix.httpfsproxy.integration_test.TextAsResourceFixture;
+import gr.helix.httpfsproxy.integration_test.TextAsStringFixture;
 import gr.helix.httpfsproxy.model.ops.AppendToFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.BooleanResponse;
 import gr.helix.httpfsproxy.model.ops.ConcatenateFilesRequestParameters;
@@ -55,6 +57,9 @@ import gr.helix.httpfsproxy.model.ops.GetHomeDirectoryResponse;
 import gr.helix.httpfsproxy.model.ops.ListStatusResponse;
 import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
 import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.SetOwnerRequestParameters;
+import gr.helix.httpfsproxy.model.ops.SetPermissionRequestParameters;
+import gr.helix.httpfsproxy.model.ops.SetReplicationRequestParameters;
 import gr.helix.httpfsproxy.model.ops.TruncateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 import gr.helix.httpfsproxy.service.OperationTemplate;
@@ -73,8 +78,7 @@ public class OperationTests
         @Bean("tempDir")
         String tempDir()
         {
-            return String.format("temp/httpfsproxy-tests-%s-%06d/",
-                Instant.now().toEpochMilli(), random.nextInt(100000));
+            return String.format("temp/httpfsproxy-tests-%09d/", random.nextInt(10000000));
         }
         
         @Bean
@@ -82,7 +86,52 @@ public class OperationTests
         {
             return this.random;
         }
+        
+        @Bean
+        TextAsStringFixture fixture01(
+            @Value("classpath:samples/text/Lorem-Ipsum-p1.txt") Resource textResource,
+            @Value("classpath:samples/text/Lorem-Ipsum-p1.txt.crc") Resource checksumResource)
+                throws IOException
+        {
+            return TextAsStringFixture.from(textResource, checksumResource);
+        }
+        
+        @Bean
+        TextAsStringFixture fixture02(
+            @Value("classpath:samples/text/Lorem-Ipsum-p2.txt") Resource textResource,
+            @Value("classpath:samples/text/Lorem-Ipsum-p2.txt.crc") Resource checksumResource)
+                throws IOException
+        {
+            return TextAsStringFixture.from(textResource, checksumResource);
+        }
+        
+        @Bean
+        TextAsResourceFixture fixture03(
+            @Value("classpath:samples/text/Aesop.txt") Resource textResource,
+            @Value("classpath:samples/text/Aesop.txt.crc") Resource checksumResource)
+                throws IOException
+        {
+            return TextAsResourceFixture.from(textResource, checksumResource);
+        }
+        
+        // This is the text resource produced by the concatenation of fixture01 and fixture02
+        @Bean
+        TextAsStringFixture fixture01plus02(
+            @Value("classpath:samples/text/Lorem-Ipsum.txt") Resource textResource,
+            @Value("classpath:samples/text/Lorem-Ipsum.txt.crc") Resource checksumResource)
+                throws IOException
+        {
+            return TextAsStringFixture.from(textResource, checksumResource);
+        }
     }
+    
+    static final String DEFAULT_FILE_PERMISSION = "664";
+    
+    static final String RESTRICTIVE_FILE_PERMISSION = "640";
+    
+    static final String DEFAULT_DIRECTORY_PERMISSION = "775";
+    
+    static final int DEFAULT_REPLICATION = 2;
     
     @Autowired
     Random random;
@@ -149,37 +198,31 @@ public class OperationTests
     @Qualifier("getContentSummaryTemplate")
     private OperationTemplate<VoidRequestParameters, ContentSummaryResponse> getContentSummaryTemplate;
     
+    @Autowired
+    @Qualifier("setPermissionTemplate")
+    private OperationTemplate<SetPermissionRequestParameters, Void> setPermissionTemplate;
+    
+    @Autowired
+    @Qualifier("setReplicationTemplate")
+    private OperationTemplate<SetReplicationRequestParameters, BooleanResponse> setReplicationTemplate;
+    
+    @Autowired
+    @Qualifier("setOwnerTemplate")
+    private OperationTemplate<SetOwnerRequestParameters, Void> setOwnerTemplate;
+    
+    @Autowired
+    private TextAsStringFixture fixture01;
+    
+    @Autowired
+    private TextAsStringFixture fixture02;
+    
+    @Autowired
+    private TextAsStringFixture fixture01plus02;
+    
+    @Autowired
+    private TextAsResourceFixture fixture03;
+    
     private String userName;
-    
-    private final String textData1 = 
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor\n" +
-        "incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation\n" +
-        "ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit\n" +
-        "in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat\n" +
-        "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n";
-    
-    private final String textData2 = 
-        "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque\n" +
-        "laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto\n" +
-        "beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit\n" +
-        "aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.\n" +
-        "Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia\n" +
-        "non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.\n" +
-        "Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid\n" +
-        "ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil\n" +
-        "molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?\n";
-    
-    @Value("classpath:samples/text/Aesop.txt")
-    private Resource textData3;
-    
-    private final String checksumForTextData1 = "0000020000000000000000005410a1b1b5ebb44f8664a3aa2dd68756";
-    
-    private final String checksumForTextData2 = "00000200000000000000000076a34aa557d5945ede4d1fe2d6248701";
-    
-    private final String checksumForTextData3 = "0000020000000000000000003d286c97e05104bfb999bce05da5bc3f";
-    
-    /** The checksum of the concatenation of textData1 and textData2 */
-    private final String checksumForTextData12 = "000002000000000000000000f43a5e0b021b739c5f4b5190344231eb";
     
     @PostConstruct
     private void setup()
@@ -236,10 +279,10 @@ public class OperationTests
         }
     }
     
-    private boolean makeDirectory(String path, String permission) throws IOException
+    private boolean makeDirectory(String path) throws IOException
     {
         MakeDirectoryRequestParameters parameters = new MakeDirectoryRequestParameters();
-        parameters.setPermission(permission);
+        parameters.setPermission(DEFAULT_DIRECTORY_PERMISSION);
         
         HttpUriRequest request = makeDirectoryTemplate.requestForPath(userName, path, parameters);
         System.err.println(" * " + request);
@@ -263,8 +306,9 @@ public class OperationTests
         final String path = StringUtils.applyRelativePath(dirPath, filename);
         
         final CreateFileRequestParameters parameters = new CreateFileRequestParameters();
-        parameters.setPermission("644");
+        parameters.setPermission(DEFAULT_FILE_PERMISSION);
         parameters.setOverwrite(false);
+        parameters.setReplication(DEFAULT_REPLICATION);
         
         HttpUriRequest request = null; 
         if (data instanceof InputStream) 
@@ -399,7 +443,7 @@ public class OperationTests
     
     private boolean deleteFile(String path) throws IOException
     {
-        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.create(false);
+        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.of(false);
         
         HttpUriRequest request =  deleteFileTemplate.requestForPath(userName, path, parameters);
         System.err.println(" * " + request);
@@ -420,7 +464,7 @@ public class OperationTests
     
     private void deleteNonEmptyDirectory(String path) throws IOException
     {
-        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.create(false);
+        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.of(false);
         
         HttpUriRequest request =  deleteFileTemplate.requestForPath(userName, path, parameters);
         System.err.println(" * " + request);
@@ -434,7 +478,7 @@ public class OperationTests
     
     private void deleteRecursiveNonEmptyDirectory(String path) throws IOException
     {
-        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.create(true);
+        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.of(true);
         
         HttpUriRequest request =  deleteFileTemplate.requestForPath(userName, path, parameters);
         System.err.println(" * " + request);
@@ -476,6 +520,32 @@ public class OperationTests
         }
     }
     
+    private void setPermission(String path, String permission) throws IOException
+    {
+        SetPermissionRequestParameters parameters = SetPermissionRequestParameters.of(permission);
+        
+        HttpUriRequest request = setPermissionTemplate.requestForPath("user", path, parameters);
+        System.err.println(" * " + request);
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+        }
+    }
+    
+    private void setReplication(String path, int replication) throws IOException
+    {
+        SetReplicationRequestParameters parameters = SetReplicationRequestParameters.of(replication);
+        
+        HttpUriRequest request = setReplicationTemplate.requestForPath("user", path, parameters);
+        System.err.println(" * " + request);
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+        }
+    }
+    
     //
     // Tests
     //
@@ -513,7 +583,7 @@ public class OperationTests
     @Test
     public void test03a_makeTempDirectory() throws IOException
     {
-        makeDirectory(tempDir, "755");
+        makeDirectory(tempDir);
     }
     
     @Test
@@ -535,58 +605,54 @@ public class OperationTests
     @Test
     public void test04a_d1_createTextInTempDirectory() throws IOException
     {        
-        String path = createFileInDirectory(tempDir, "data1-a.txt", textData1.getBytes());
+        String path = createFileInDirectory(tempDir, "data1-a.txt", fixture01.getText().getBytes());
         FileChecksum checksum = getFileChecksum(path);
-        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(checksumForTextData1)));
+        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture01.getChecksum())));
     }
     
     @Test
     public void test04a_d2_createTextInTempDirectory() throws IOException
     {        
-        String path = createFileInDirectory(tempDir, "data2-a.txt", textData2.getBytes());
+        String path = createFileInDirectory(tempDir, "data2-a.txt", fixture02.getText().getBytes());
         FileChecksum checksum = getFileChecksum(path);
-        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(checksumForTextData2)));
+        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture02.getChecksum())));
     }
     
     @Test
     public void test04a_d3_createTextInTempDirectory() throws IOException
     {        
-        String text = null;
-        try (InputStream in = textData3.getInputStream()) { 
-            text = IOUtils.toString(in, Charset.forName("UTF-8"));
-        }
-        String path = createFileInDirectory(tempDir, "data3-a.txt", text.getBytes());
+        String path = createFileInDirectory(tempDir, "data3-a.txt", fixture03.readText().getBytes());
         FileChecksum checksum = getFileChecksum(path);
-        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(checksumForTextData3)));
+        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture03.getChecksum())));
     }
     
     @Test
     public void test04b_d1_createTextInTempDirectory() throws IOException
     {        
-        ByteArrayInputStream in = new ByteArrayInputStream(textData1.getBytes());
+        ByteArrayInputStream in = new ByteArrayInputStream(fixture01.getText().getBytes());
         String path = createFileInDirectory(tempDir, "data1-b.txt", in);
         FileChecksum checksum = getFileChecksum(path);
-        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(checksumForTextData1)));
+        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture01.getChecksum())));
     }
     
     @Test
     public void test04b_d2_createTextInTempDirectory() throws IOException
     {        
-        ByteArrayInputStream in = new ByteArrayInputStream(textData2.getBytes());
+        ByteArrayInputStream in = new ByteArrayInputStream(fixture02.getText().getBytes());
         String path = createFileInDirectory(tempDir, "data2-b.txt", in);
         FileChecksum checksum = getFileChecksum(path);
-        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(checksumForTextData2)));
+        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture02.getChecksum())));
     }
  
     @Test
     public void test04b_d3_createTextInTempDirectory() throws IOException
     {   
         String path = null;
-        try (InputStream in = textData3.getInputStream()) { 
+        try (InputStream in = fixture03.getResource().getInputStream()) { 
             path = createFileInDirectory(tempDir, "data3-b.txt", in);
         }
         FileChecksum checksum = getFileChecksum(path);
-        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(checksumForTextData3)));
+        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture03.getChecksum())));
     }
     
     @Test
@@ -603,7 +669,7 @@ public class OperationTests
         assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.FILE)));
         assertThat(r, hasProperty("ownerName", equalTo(userName)));
         assertThat(r, hasProperty("path", isEmptyString()));
-        assertThat(r, hasProperty("length", equalTo(Long.valueOf(textData1.length()))));
+        assertThat(r, hasProperty("length", equalTo(Long.valueOf(fixture01.getText().length()))));
         assertThat(r, hasProperty("replication", greaterThanOrEqualTo(2)));
     }
     
@@ -614,7 +680,7 @@ public class OperationTests
         assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.FILE)));
         assertThat(r, hasProperty("ownerName", equalTo(userName)));
         assertThat(r, hasProperty("path", isEmptyString()));
-        assertThat(r, hasProperty("length", equalTo(Long.valueOf(textData2.length()))));
+        assertThat(r, hasProperty("length", equalTo(Long.valueOf(fixture02.getText().length()))));
         assertThat(r, hasProperty("replication", greaterThanOrEqualTo(2)));
     }
     
@@ -628,96 +694,94 @@ public class OperationTests
     public void test05a_d12_appendTextToFile() throws IOException
     {
         String name = "data12-a.txt";
-        String path = createFileInDirectory(tempDir, name, textData1.getBytes());
-        appendToFile(path, textData2.getBytes());
+        String path = createFileInDirectory(tempDir, name, fixture01.getText().getBytes());
+        appendToFile(path, fixture02.getText().getBytes());
+        FileChecksum checksum = getFileChecksum(path);
+        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture01plus02.getChecksum())));
     }
     
     @Test 
     public void test05b_d12_appendTextToFile() throws IOException
     {
         String name = "data12-b.txt";
-        ByteArrayInputStream in1 = new ByteArrayInputStream(textData1.getBytes());
+        ByteArrayInputStream in1 = new ByteArrayInputStream(fixture01.getText().getBytes());
         String path = createFileInDirectory(tempDir, name, in1);
-        ByteArrayInputStream in2 = new ByteArrayInputStream(textData2.getBytes());
+        ByteArrayInputStream in2 = new ByteArrayInputStream(fixture02.getText().getBytes());
         appendToFile(path, in2);
         FileChecksum checksum = getFileChecksum(path);
-        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(checksumForTextData12)));
+        assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture01plus02.getChecksum())));
     }
     
     @Test 
     public void test05z_appendTextToNonExistingFile() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "i-dont-exist.txt");
-        appendToNonExistingFile(path, textData1.getBytes());
+        appendToNonExistingFile(path, fixture01.getText().getBytes());
     }
     
-    @Test // Note: must run after test4a_d1_createTextInTempDirectory
+    @Test // Note: must run after test04a_d1_createTextInTempDirectory
     public void test06a_d1_readText() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
         String textData = readTextFile(path);
-        assertEquals(textData1, textData);
+        assertEquals(fixture01.getText(), textData);
     }
     
-    @Test // Note: must run after test4a_d2_createTextInTempDirectory
+    @Test // Note: must run after test04a_d2_createTextInTempDirectory
     public void test06a_d2_readText() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "data2-a.txt");
         String textData = readTextFile(path);
-        assertEquals(textData2, textData);
+        assertEquals(fixture02.getText(), textData);
     }
     
-    @Test // Note: must run after test4a_d3_createTextInTempDirectory
+    @Test // Note: must run after test04a_d3_createTextInTempDirectory
     public void test06a_d3_readText() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "data3-a.txt");
         String textData = readTextFile(path);
-        
-        String expectedTextData = null;
-        try (InputStream in = textData3.getInputStream()) {
-            expectedTextData = IOUtils.toString(in, Charset.forName("UTF-8"));
-        }
-        assertEquals(expectedTextData, textData);
+        assertEquals(fixture03.readText(), textData);
     }
     
-    @Test // Note: must run after test4a_d12_createTextInTempDirectory
+    @Test // Note: must run after test04a_d12_createTextInTempDirectory
     public void test06a_d12_readText() throws IOException
     {
         String path = StringUtils.applyRelativePath(tempDir, "data12-a.txt");
         String textData = readTextFile(path);
-        assertEquals(textData1 + textData2, textData);
+        String expectedTextData = fixture01.getText() + fixture02.getText();
+        assertEquals(expectedTextData, textData);
     }
     
     @Test
     public void test07a_d1_concatenateTextFiles() throws IOException
     {
-        String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", textData1.getBytes());
+        String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", fixture01.getText().getBytes());
         // CONCAT expects the destination path to exist: create an empty file
         String path = createFileInDirectory(tempDir, "concat-data-1-a.txt", new byte[0]);
         concatenateFiles(path, sourcePath1);
         String textData = readTextFile(path);
-        assertEquals(textData1, textData);
+        assertEquals(fixture01.getText(), textData);
     }
     
     @Test
     public void test07a_d12_concatenateTextFiles() throws IOException
     {
-        String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", textData1.getBytes());
-        String sourcePath2 = createFileInDirectory(tempDir, "data-part-2.txt", textData2.getBytes());
+        String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", fixture01.getText().getBytes());
+        String sourcePath2 = createFileInDirectory(tempDir, "data-part-2.txt", fixture02.getText().getBytes());
         // CONCAT expects the destination path to exist: create an empty file
         String path = createFileInDirectory(tempDir, "concat-data-1-2-a.txt", new byte[0]);
         concatenateFiles(path, sourcePath1, sourcePath2);
         String textData = readTextFile(path);
-        String expectedTextData = textData1 + textData2;
+        String expectedTextData = fixture01.getText() + fixture02.getText();
         assertEquals(expectedTextData, textData);
     }
     
     @Test
     public void test08a_d1_truncateFile() throws IOException
     {
-        String path = createFileInDirectory(tempDir, "data1-a-to-be-truncated.txt", textData1.getBytes());
+        String path = createFileInDirectory(tempDir, "data1-a-to-be-truncated.txt", fixture01.getText().getBytes());
         FileStatus st0 = getFileStatus(path);
-        assertThat(st0, hasProperty("length", equalTo(Long.valueOf(textData1.length()))));
+        assertThat(st0, hasProperty("length", equalTo(Long.valueOf(fixture01.getText().length()))));
         
         truncateFile(path);
         FileStatus st1 = getFileStatus(path);
@@ -727,7 +791,7 @@ public class OperationTests
     @Test
     public void test09a_d1_deleteFile() throws IOException
     {
-        String path = createFileInDirectory(tempDir, "data1-a-to-be-deleted.txt", textData1.getBytes());
+        String path = createFileInDirectory(tempDir, "data1-a-to-be-deleted.txt", fixture01.getText().getBytes());
         getFileStatus(path);
         deleteFile(path);
         getFileStatusOfNonExisitingFile(path);
@@ -738,7 +802,7 @@ public class OperationTests
     {
         String dirName = String.format("sub-%05d", random.nextInt(100000));
         String dirPath = StringUtils.applyRelativePath(tempDir, dirName) + "/";
-        makeDirectory(dirPath, "775");
+        makeDirectory(dirPath);
         createFileInDirectory(dirPath, "timestamp", new byte[0]);
         deleteNonEmptyDirectory(dirPath);
     }
@@ -748,7 +812,7 @@ public class OperationTests
     {
         String dirName = String.format("sub-%05d", random.nextInt(100000));
         String dirPath = StringUtils.applyRelativePath(tempDir, dirName) + "/";
-        makeDirectory(dirPath, "775");
+        makeDirectory(dirPath);
         createFileInDirectory(dirPath, "timestamp", new byte[0]);
         deleteRecursiveNonEmptyDirectory(dirPath);
     }
@@ -767,5 +831,29 @@ public class OperationTests
     public void test10b_getSummaryOfNonExistingDirectory() throws IOException
     {
         getSummaryOfNonExistingPath(StringUtils.applyRelativePath(tempDir, "i-dont-exist"));
+    }
+    
+    @Test // Note: must run after test04_d1_* which creates examined file
+    public void test11a_d1_setPermission() throws IOException
+    {
+        String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
+        FileStatus st0 = getFileStatus(path);
+        assertThat(st0, hasProperty("permission", equalTo(DEFAULT_FILE_PERMISSION)));
+        
+        setPermission(path, RESTRICTIVE_FILE_PERMISSION);
+        FileStatus st1 = getFileStatus(path);
+        assertThat(st1, hasProperty("permission", equalTo(RESTRICTIVE_FILE_PERMISSION)));
+    }
+    
+    @Test // Note: must run after test04_d1_* which creates examined file
+    public void test12a_d1_setReplication() throws IOException
+    {
+        String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
+        FileStatus st0 = getFileStatus(path);
+        assertThat(st0, hasProperty("replication", equalTo(DEFAULT_REPLICATION)));
+        
+        setReplication(path, DEFAULT_REPLICATION + 1);
+        FileStatus st1 = getFileStatus(path);
+        assertThat(st1, hasProperty("replication", equalTo(DEFAULT_REPLICATION + 1)));
     }
 }
