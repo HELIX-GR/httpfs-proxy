@@ -21,9 +21,9 @@ public enum EnumOperation
     
     MKDIRS,
     
-    CREATESYMLINK,
-    
     RENAME,
+    
+    CREATESYMLINK, /* not supported in HttpFS (2.9.2) */
     
     DELETE,
     
@@ -34,6 +34,8 @@ public enum EnumOperation
     SETOWNER,
     
     SETREPLICATION,
-
+    
+    GETCONTENTSUMMARY,
+    
     ;
 }

@@ -184,7 +184,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         return uri;
     }
     
-    private HttpUriRequest _requestForPath(
+    private HttpUriRequest requestForPath1(
         String userName, String filePath, P parameters, InputStream inputStream, ContentType contentType)
     {
         Assert.state(!StringUtils.isEmpty(userName), "Expected a non-empty userName!");
@@ -205,7 +205,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         return reqBuilder.build();
     }
 
-    private HttpUriRequest _requestForPath(
+    private HttpUriRequest requestForPath1(
         String userName, String filePath, P parameters, byte[] data, ContentType contentType)
     {
         Assert.state(!StringUtils.isEmpty(userName), "Expected a non-empty userName!");
@@ -244,14 +244,14 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     public HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath)
     {
-        return _requestForPath(userName, filePath, (P) null, (byte[]) null, null);
+        return requestForPath1(userName, filePath, (P) null, (byte[]) null, null);
     }
     
     @Override
     public HttpUriRequest requestForPath(
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters)
     {
-        return _requestForPath(userName, filePath, parameters, (byte[]) null, null);
+        return requestForPath1(userName, filePath, parameters, (byte[]) null, null);
     }
     
     @Override
@@ -259,7 +259,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         @NotEmpty String userName, @NotNull @FilePath String filePath,
         @NotNull InputStream inputStream, @NotNull ContentType contentType)
     {
-        return _requestForPath(userName, filePath, (P) null, inputStream, contentType);
+        return requestForPath1(userName, filePath, (P) null, inputStream, contentType);
     }
     
     @Override
@@ -267,7 +267,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         @NotEmpty String userName, @NotNull @FilePath String filePath,
         @NotNull InputStream inputStream)
     {
-        return _requestForPath(userName, filePath, (P) null, inputStream, this.defaultContentType());
+        return requestForPath1(userName, filePath, (P) null, inputStream, this.defaultContentType());
     }
     
     @Override
@@ -275,7 +275,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull InputStream inputStream, @NotNull ContentType contentType)
     {
-        return _requestForPath(userName, filePath, parameters, inputStream, contentType);
+        return requestForPath1(userName, filePath, parameters, inputStream, contentType);
     }
     
     @Override
@@ -283,7 +283,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         @NotEmpty String userName, @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull InputStream inputStream)
     {
-        return _requestForPath(userName, filePath, parameters, inputStream, this.defaultContentType());
+        return requestForPath1(userName, filePath, parameters, inputStream, this.defaultContentType());
     }
     
     @Override
@@ -291,7 +291,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         @NotEmpty String userName, @NotNull @FilePath String filePath, 
         @NotNull byte[] data, @NotNull ContentType contentType)
     {
-        return _requestForPath(userName, filePath, (P) null, data, contentType);
+        return requestForPath1(userName, filePath, (P) null, data, contentType);
     }
     
     @Override
@@ -299,7 +299,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         @NotEmpty String userName, @NotNull @FilePath String filePath, 
         @NotNull byte[] data)
     {
-        return _requestForPath(userName, filePath, (P) null, data, this.defaultContentType());
+        return requestForPath1(userName, filePath, (P) null, data, this.defaultContentType());
     }
     
     @Override
@@ -307,7 +307,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull byte[] data, @NotNull ContentType contentType)
     {
-        return _requestForPath(userName, filePath, parameters, data, contentType);
+        return requestForPath1(userName, filePath, parameters, data, contentType);
     }
     
     @Override
@@ -315,7 +315,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
         @NotNull @FilePath String filePath, @Valid P parameters, 
         @NotNull byte[] data)
     {
-        return _requestForPath(userName, filePath, parameters, data, this.defaultContentType());
+        return requestForPath1(userName, filePath, parameters, data, this.defaultContentType());
     }
     
 }
