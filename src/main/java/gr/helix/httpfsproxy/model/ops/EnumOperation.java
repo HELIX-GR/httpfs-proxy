@@ -25,6 +25,8 @@ public enum EnumOperation
     
     CREATESYMLINK, /* not supported in HttpFS (2.9.2) */
     
+    TRUNCATE,
+    
     DELETE,
     
     GETFILECHECKSUM,

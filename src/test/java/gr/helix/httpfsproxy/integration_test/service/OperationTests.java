@@ -52,6 +52,7 @@ import gr.helix.httpfsproxy.model.ops.GetHomeDirectoryResponse;
 import gr.helix.httpfsproxy.model.ops.ListStatusResponse;
 import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
 import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.TruncateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 import gr.helix.httpfsproxy.service.OperationTemplate;
 
@@ -111,6 +112,10 @@ public class OperationTests
     @Autowired
     @Qualifier("appendToFileTemplate")
     private OperationTemplate<AppendToFileRequestParameters, Void> appendToFileTemplate;
+    
+    @Autowired
+    @Qualifier("truncateFileTemplate")
+    private OperationTemplate<TruncateFileRequestParameters, BooleanResponse> truncateFileTemplate;
     
     @Autowired
     @Qualifier("getFileChecksumTemplate")
@@ -338,6 +343,27 @@ public class OperationTests
         }
         
         return path;
+    }
+    
+    private boolean truncateFile(String path) throws IOException
+    {
+        TruncateFileRequestParameters parameters = new TruncateFileRequestParameters();
+        
+        HttpUriRequest request =  truncateFileTemplate.requestForPath(userName, path, parameters);
+        System.err.println(" * " + request);
+        
+        BooleanResponse r = null;
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            final HttpEntity e = response.getEntity();
+            assertNotNull(e);
+            r = truncateFileTemplate.responseFromHttpEntity(e);
+            assertNotNull(r);
+            assertThat(r, hasProperty("flag", equalTo(Boolean.TRUE)));
+        }
+        
+        return r.getFlag();
     }
     
     //
@@ -570,5 +596,15 @@ public class OperationTests
         assertEquals(expectedTextData, textData);
     }
     
-    
+    @Test
+    public void test8a_d1_truncateFile() throws IOException
+    {
+        String path = createFileInDirectory(tempDir, "data1-a-to-be-truncated.txt", textData1.getBytes());
+        FileStatus st0 = getFileStatus(path);
+        assertThat(st0, hasProperty("length", equalTo(Long.valueOf(textData1.length()))));
+        
+        truncateFile(path);
+        FileStatus st1 = getFileStatus(path);
+        assertThat(st1, hasProperty("length", equalTo(0L)));
+    }
 }
