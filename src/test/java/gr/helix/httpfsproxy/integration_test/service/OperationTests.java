@@ -44,6 +44,7 @@ import gr.helix.httpfsproxy.model.ops.AppendToFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.BooleanResponse;
 import gr.helix.httpfsproxy.model.ops.ConcatenateFilesRequestParameters;
 import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.DeleteFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.FileChecksum;
 import gr.helix.httpfsproxy.model.ops.FileStatus;
 import gr.helix.httpfsproxy.model.ops.GetFileChecksumResponse;
@@ -73,7 +74,16 @@ public class OperationTests
             return String.format("temp/httpfsproxy-tests-%s-%06d/",
                 Instant.now().toEpochMilli(), random.nextInt(100000));
         }
+        
+        @Bean
+        Random random()
+        {
+            return this.random;
+        }
     }
+    
+    @Autowired
+    Random random;
     
     @Autowired
     HttpFsServiceConfiguration backend;
@@ -129,6 +139,10 @@ public class OperationTests
     @Qualifier("concatenateFilesTemplate")
     private OperationTemplate<ConcatenateFilesRequestParameters, Void> concatenateFilesTemplate;
     
+    @Autowired
+    @Qualifier("deleteFileTemplate")
+    private OperationTemplate<DeleteFileRequestParameters, BooleanResponse> deleteFileTemplate;
+    
     private String userName;
     
     private final String textData1 = 
@@ -137,8 +151,6 @@ public class OperationTests
         "ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit\n" +
         "in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat\n" +
         "non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\n";
-    
-    private final String checksumForTextData1 = "0000020000000000000000005410a1b1b5ebb44f8664a3aa2dd68756";
     
     private final String textData2 = 
         "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque\n" +
@@ -151,15 +163,17 @@ public class OperationTests
         "ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil\n" +
         "molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?\n";
     
-    private final String checksumForTextData2 = "00000200000000000000000076a34aa557d5945ede4d1fe2d6248701";
-    
-    /** The checksum of the concatenation of textData1 and textData2 */
-    private final String checksumForTextData12 = "000002000000000000000000f43a5e0b021b739c5f4b5190344231eb";
-    
     @Value("classpath:samples/text/Aesop.txt")
     private Resource textData3;
     
+    private final String checksumForTextData1 = "0000020000000000000000005410a1b1b5ebb44f8664a3aa2dd68756";
+    
+    private final String checksumForTextData2 = "00000200000000000000000076a34aa557d5945ede4d1fe2d6248701";
+    
     private final String checksumForTextData3 = "0000020000000000000000003d286c97e05104bfb999bce05da5bc3f";
+    
+    /** The checksum of the concatenation of textData1 and textData2 */
+    private final String checksumForTextData12 = "000002000000000000000000f43a5e0b021b739c5f4b5190344231eb";
     
     @PostConstruct
     private void setup()
@@ -203,6 +217,17 @@ public class OperationTests
         }
         
         return r.getFileStatus();
+    }
+    
+    private void getFileStatusOfNonExisitingFile(String path) throws IOException
+    {
+        HttpUriRequest request = getFileStatusTemplate.requestForPath(userName, path);
+        System.err.println(" * " + request);
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_NOT_FOUND, responseStatus.getStatusCode());
+        }
     }
     
     private boolean makeDirectory(String path, String permission) throws IOException
@@ -366,6 +391,54 @@ public class OperationTests
         return r.getFlag();
     }
     
+    private boolean deleteFile(String path) throws IOException
+    {
+        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.create(false);
+        
+        HttpUriRequest request =  deleteFileTemplate.requestForPath(userName, path, parameters);
+        System.err.println(" * " + request);
+        
+        BooleanResponse r = null;
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            final HttpEntity e = response.getEntity();
+            assertNotNull(e);
+            r = deleteFileTemplate.responseFromHttpEntity(e);
+            assertNotNull(r);
+            assertThat(r, hasProperty("flag", equalTo(Boolean.TRUE)));
+        }
+        
+        return r.getFlag();
+    }
+    
+    private void deleteNonEmptyDirectory(String path) throws IOException
+    {
+        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.create(false);
+        
+        HttpUriRequest request =  deleteFileTemplate.requestForPath(userName, path, parameters);
+        System.err.println(" * " + request);
+        
+        // Trying to delete an non-empty directory results to HTTP 500
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertNotEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+        }
+    }
+    
+    private void deleteRecursiveNonEmptyDirectory(String path) throws IOException
+    {
+        DeleteFileRequestParameters parameters = DeleteFileRequestParameters.create(true);
+        
+        HttpUriRequest request =  deleteFileTemplate.requestForPath(userName, path, parameters);
+        System.err.println(" * " + request);
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            final StatusLine responseStatus = response.getStatusLine();
+            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+        }
+    }
+    
     //
     // Tests
     //
@@ -508,6 +581,12 @@ public class OperationTests
         assertThat(r, hasProperty("replication", greaterThanOrEqualTo(2)));
     }
     
+    @Test
+    public void test4z_getFileStatusOfNonExistingFile() throws IOException
+    {
+        getFileStatusOfNonExisitingFile(StringUtils.applyRelativePath(tempDir, "i-dont-exist.txt"));
+    }
+    
     @Test 
     public void test5a_d12_appendTextToFile() throws IOException
     {
@@ -606,5 +685,34 @@ public class OperationTests
         truncateFile(path);
         FileStatus st1 = getFileStatus(path);
         assertThat(st1, hasProperty("length", equalTo(0L)));
+    }
+    
+    @Test
+    public void test9a_d1_deleteFile() throws IOException
+    {
+        String path = createFileInDirectory(tempDir, "data1-a-to-be-deleted.txt", textData1.getBytes());
+        getFileStatus(path);
+        deleteFile(path);
+        getFileStatusOfNonExisitingFile(path);
+    }
+    
+    @Test
+    public void test9_deleteNonEmptyDirectory() throws IOException
+    {
+        String dirName = String.format("sub-%05d", random.nextInt(100000));
+        String dirPath = StringUtils.applyRelativePath(tempDir, dirName) + "/";
+        makeDirectory(dirPath, "775");
+        createFileInDirectory(dirPath, "timestamp", new byte[0]);
+        deleteNonEmptyDirectory(dirPath);
+    }
+    
+    @Test
+    public void test9_deleteRecursiveNonEmptyDirectory() throws IOException
+    {
+        String dirName = String.format("sub-%05d", random.nextInt(100000));
+        String dirPath = StringUtils.applyRelativePath(tempDir, dirName) + "/";
+        makeDirectory(dirPath, "775");
+        createFileInDirectory(dirPath, "timestamp", new byte[0]);
+        deleteRecursiveNonEmptyDirectory(dirPath);
     }
 }

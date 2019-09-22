@@ -1,7 +1,5 @@
 package gr.helix.httpfsproxy.service;
 
-import java.util.Collection;
-
 import org.apache.http.entity.ContentType;
 
 import gr.helix.httpfsproxy.model.ops.BaseRequestParameters;
