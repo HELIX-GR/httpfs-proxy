@@ -7,6 +7,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @lombok.Data
 @lombok.EqualsAndHashCode(callSuper = false)
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ReadFileRequestParameters extends BaseRequestParameters
 {
