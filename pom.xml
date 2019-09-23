@@ -326,7 +326,7 @@
                         </goals>
                         <configuration>
                             <skip>true</skip>
-                            <verbose>true</verbose>
+                            <verbose>false</verbose>
                             <sourceDirectory>src/main/java</sourceDirectory>
                             <addOutputDirectory>false</addOutputDirectory>
                         </configuration>

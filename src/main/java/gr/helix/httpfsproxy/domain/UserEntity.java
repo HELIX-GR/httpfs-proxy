@@ -277,7 +277,14 @@ public class UserEntity
      */
     public UserDetails toUserDetails()
     {
-        return new SimpleUserDetails(getRoles(), username, password, active, blocked);
+        return SimpleUserDetails.builder()
+            .username(this.username)
+            .roles(getRoles())
+            .usernameForHdfs(this.hdfsUsername)
+            .blocked(this.blocked)
+            .enabled(this.active)
+            .password(this.password)
+            .build();
     }
 
     @Override

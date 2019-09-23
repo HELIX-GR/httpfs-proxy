@@ -38,7 +38,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
     {
         builder.inMemoryAuthentication()
             .withUser("admin")
-                .authorities("ADMIN", "USER")
+                .authorities("ADMIN")
                 .password("{noop}" + adminPassword);
         
         builder.userDetailsService(userService)

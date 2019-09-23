@@ -4,12 +4,14 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * @see https://hadoop.apache.org/docs/r2.9.2/hadoop-project-dist/hadoop-hdfs/WebHDFS.html#FileStatus_Properties
  */
 @lombok.Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FileStatus
 {
     public enum EnumType {
@@ -22,7 +24,11 @@ public class FileStatus
     @JsonProperty("type")
     EnumType type;
     
-    @NotEmpty
+    /**
+     * The suffix name component for this path.
+     * This is always relative (may be empty) and must be resolved against a current path 
+     * (e.g the path of a <tt>LISTSTATUS</tt> or a <tt>GETFILESTATUS</tt> operation).
+     */
     @JsonProperty("pathSuffix")
     String path;
     

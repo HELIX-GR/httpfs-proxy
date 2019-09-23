@@ -9,30 +9,27 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.google.common.collect.Lists;
 
+@lombok.Data
+@lombok.Builder
+@lombok.ToString(exclude = {"password"})
 public class SimpleUserDetails implements UserDetails
 {
     private static final long serialVersionUID = 1L;
     
-    private final List<EnumRole> roles;
-    
+    @lombok.NonNull
     private final String username;
     
-    private final String password;
+    @lombok.NonNull
+    private final List<EnumRole> roles;
     
-    private final boolean active;
+    private final String usernameForHdfs;
+    
+    private String password;
+    
+    private final boolean enabled;
     
     private final boolean blocked;
     
-    public SimpleUserDetails(
-        List<EnumRole> roles, String username, String password, boolean active, boolean blocked)
-    {
-        this.roles = roles;
-        this.username = username;
-        this.password = password;
-        this.active = active;
-        this.blocked = blocked;
-    }
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities()
     {
@@ -40,21 +37,9 @@ public class SimpleUserDetails implements UserDetails
     }
 
     @Override
-    public String getPassword()
-    {
-        return password;
-    }
-
-    @Override
-    public String getUsername()
-    {
-        return username;
-    }
-
-    @Override
     public boolean isAccountNonExpired()
     {
-        return active;
+        return enabled;
     }
 
     @Override
@@ -66,13 +51,12 @@ public class SimpleUserDetails implements UserDetails
     @Override
     public boolean isCredentialsNonExpired()
     {
-        return active;
+        return enabled;
     }
 
     @Override
     public boolean isEnabled()
     {
-        return active;
-    }   
-
+        return enabled;
+    }
 }
