@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @lombok.Data
 @lombok.AllArgsConstructor(staticName = "of")
 @lombok.NoArgsConstructor
-public class HomeDirectoryResult
+public class FilePathResult
 {
     @JsonProperty("path")
     @NotEmpty

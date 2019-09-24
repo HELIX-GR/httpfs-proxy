@@ -39,6 +39,6 @@ public class MakeDirectoryTemplate extends AbstractPutOperationTemplate<MakeDire
     @Override
     protected MakeDirectoryRequestParameters defaultParameters()
     {
-        return new MakeDirectoryRequestParameters();
+        return MakeDirectoryRequestParameters.of("755");
     }
 }

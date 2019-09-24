@@ -281,8 +281,8 @@ public class OperationTests
     
     private boolean makeDirectory(String path) throws IOException
     {
-        MakeDirectoryRequestParameters parameters = new MakeDirectoryRequestParameters();
-        parameters.setPermission(DEFAULT_DIRECTORY_PERMISSION);
+        MakeDirectoryRequestParameters parameters = 
+            MakeDirectoryRequestParameters.of(DEFAULT_DIRECTORY_PERMISSION);
         
         HttpUriRequest request = makeDirectoryTemplate.requestForPath(userName, path, parameters);
         System.err.println(" * " + request);
