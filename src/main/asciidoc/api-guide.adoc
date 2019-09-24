@@ -1,1 +1,80 @@
 = API Guide - HttpFS-Proxy
+HttpFS-Proxy v{version} HELIX-GR;
+:icons: font
+:source-highlighter: highlightjs
+:highlightjs-theme: github
+:toc: left
+:toclevels: 2
+:sectlinks:
+
+[[overview]]
+== Overview
+
+The `HttpFS-Proxy` service is an authenticating proxy in front of a HttpFS/HDFS service. It offers a REST API for manipulating 
+files on an HDFS filesystem, simplifying the underlying `webhdfs` API exposed from the `HttpFS`/`HDFS` service.
+
+It acts as a gateway service (similarly to the what `HttpFS` does) i.e. it does not require that the client has network 
+access to the Hadoop cluster.
+
+[[authentication]]
+== Authentication
+
+The API authenticates incoming requests using https://en.wikipedia.org/wiki/Basic_access_authentication[HTTP Basic Authentication] 
+scheme. So, it expects an `Authorization` request header to be present in each request.
+
+A simple example using `curl` and authenticating as user `someone` (proper headers will be added by `curl` because of the `-u` flag):
+[source,bash]
+----
+curl -XGET -u someone -i \
+  'https://c2-httpfsproxy.hellenicdataservice.gr/files/status?path=temp/hello.txt'
+----
+
+Each proxy-level user maps to a Hadoop-level user, not necessarily with the same name. The proxy maintains the mapping between its users
+and Hadoop-level users in order to be able to form proper requests to the underlying `webhdfs` API (e.g. for translating relative paths).
+
+From now on, we will assume that all example requests are performed by a user `someone` mapping to a Hadoop-level user `user`.  
+
+[[files]]
+== Files API
+
+[[files-gethomedirectory]]
+=== Get Home Directory
+
+This is an HTTP GET request. 
+
+==== The request parameters
+
+No parameters
+
+==== The response
+
+The overall response is as follows:
+
+include::{snippets}/get-home-directory/response-fields.adoc[]
+
+The `result` part in detail:
+
+include::{snippets}/get-home-directory/response-fields-result.adoc[]
+
+==== A request/response example
+
+include::{snippets}/get-home-directory/http-request.adoc[]
+
+include::{snippets}/get-home-directory/http-response.adoc[]
+
+==== A request example with CURL
+
+include::{snippets}/get-home-directory/curl-request.adoc[]
+
+
+
+[[files-status]]
+=== Get status of a file/directory
+
+_Todo_
+
+[[files-liststatus]]
+=== List a directory
+
+_Todo_
+

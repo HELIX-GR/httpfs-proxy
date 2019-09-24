@@ -26,6 +26,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.Assert;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -57,8 +58,11 @@ import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
 import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 import gr.helix.httpfsproxy.service.OperationTemplate;
+import lombok.NonNull;
+
 
 @Controller
+@Validated
 public class FilesController
 {
     private final static Logger logger = LoggerFactory.getLogger(FilesController.class);
@@ -156,7 +160,7 @@ public class FilesController
     @GetMapping(path = "/files/home-directory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getHomeDirectory(
-        Authentication authn, 
+        @NonNull Authentication authn, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails)
             throws Exception
     {
@@ -182,7 +186,7 @@ public class FilesController
     @GetMapping(path = "/files/status", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getStatus(
-        Authentication authn, 
+        @NonNull Authentication authn, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath)
             throws Exception  
@@ -211,7 +215,7 @@ public class FilesController
     @GetMapping(path = "/files/summary", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getSummary(
-        Authentication authn, 
+        @NonNull Authentication authn, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath)
             throws IOException  
@@ -240,7 +244,7 @@ public class FilesController
     @GetMapping(path = "/files/file-checksum", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getFileChecksum(
-        Authentication authn, 
+        @NonNull Authentication authn, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath)
             throws Exception  
@@ -269,7 +273,7 @@ public class FilesController
     @GetMapping(path = "/files/list-status", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> listStatus(
-        Authentication authn, 
+        @NonNull Authentication authn, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath)
             throws Exception
@@ -299,7 +303,7 @@ public class FilesController
     
     @GetMapping(path = "/files/content", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> download(
-        Authentication authn, 
+        @NonNull Authentication authn, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath,
         @RequestParam(name = "length", required = false) @Min(0) Long length,
@@ -356,7 +360,7 @@ public class FilesController
     @PostMapping(path = "/files/directory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public ResponseEntity<?> makeDirectory(
-        Authentication authn, 
+        @NonNull Authentication authn, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath, 
         @RequestParam(name  = "permission", defaultValue = "775") String permission)
@@ -372,7 +376,7 @@ public class FilesController
             final HttpStatus status = HttpStatus.valueOf(statusLine.getStatusCode());
         }
         
-        // Todo
+        // Todo makeDirectory
         return null;
     }
 }

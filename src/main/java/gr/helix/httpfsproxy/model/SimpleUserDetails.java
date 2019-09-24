@@ -1,6 +1,7 @@
 package gr.helix.httpfsproxy.model;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.security.core.GrantedAuthority;
@@ -9,9 +10,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.google.common.collect.Lists;
 
-@lombok.Data
+import lombok.AccessLevel;
+
+@lombok.Getter
 @lombok.Builder
-@lombok.ToString(exclude = {"password"})
 public class SimpleUserDetails implements UserDetails
 {
     private static final long serialVersionUID = 1L;
@@ -20,15 +22,18 @@ public class SimpleUserDetails implements UserDetails
     private final String username;
     
     @lombok.NonNull
-    private final List<EnumRole> roles;
+    @lombok.Builder.Default
+    private final List<EnumRole> roles = Collections.singletonList(EnumRole.USER);
     
     private final String usernameForHdfs;
     
     private String password;
     
-    private final boolean enabled;
+    @lombok.Builder.Default
+    private final boolean enabled = true;
     
-    private final boolean blocked;
+    @lombok.Builder.Default
+    private final boolean blocked = false;
     
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities()
