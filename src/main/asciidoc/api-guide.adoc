@@ -1,5 +1,5 @@
 = API Guide - HttpFS-Proxy
-HttpFS-Proxy v{version} HELIX-GR;
+HttpFS-Proxy v{project-version} HELIX-GR;
 :icons: font
 :source-highlighter: highlightjs
 :highlightjs-theme: github
@@ -25,8 +25,7 @@ scheme. So, it expects an `Authorization` request header to be present in each r
 A simple example using `curl` and authenticating as user `someone` (proper headers will be added by `curl` because of the `-u` flag):
 [source,bash]
 ----
-curl -XGET -u someone -i \
-  'https://c2-httpfsproxy.hellenicdataservice.gr/files/status?path=temp/hello.txt'
+curl -XGET -u someone -i 'https://httpfsproxy.example.net/files/status?path=temp/hello.txt'
 ----
 
 Each proxy-level user maps to a Hadoop-level user, not necessarily with the same name. The proxy maintains the mapping between its users
@@ -34,13 +33,29 @@ and Hadoop-level users in order to be able to form proper requests to the underl
 
 From now on, we will assume that all example requests are performed by a user `someone` mapping to a Hadoop-level user `user`.  
 
+
+[[resources]]
+== Resources
+
+This section describes some common resources exchanged by the API.
+
+[[resources-filestatus]]
+=== File Status
+
+An object that represents the status of a file/directory in a HDFS filesystem. Is the rough equivalent to the output 
+of the `stat` command in a POSIX filesystem.
+
+include::{snippets}/files-controller-tests/test-get-file-status-y1/response-fields-result-status.adoc[]
+
+
+
 [[files]]
 == Files API
 
 [[files-gethomedirectory]]
 === Get Home Directory
 
-This is an HTTP GET request. 
+This is a `GET` request to `/files/home-directory`. 
 
 ==== The request parameters
 
@@ -49,32 +64,90 @@ No parameters
 ==== The response
 
 The overall response is as follows:
-
-include::{snippets}/get-home-directory/response-fields.adoc[]
+include::{snippets}/files-controller-tests/test-get-home-directory/response-fields.adoc[]
 
 The `result` part in detail:
-
-include::{snippets}/get-home-directory/response-fields-result.adoc[]
+include::{snippets}/files-controller-tests/test-get-home-directory/response-fields-result.adoc[]
 
 ==== A request/response example
 
-include::{snippets}/get-home-directory/http-request.adoc[]
+include::{snippets}/files-controller-tests/test-get-home-directory/http-request.adoc[]
 
-include::{snippets}/get-home-directory/http-response.adoc[]
+include::{snippets}/files-controller-tests/test-get-home-directory/http-response.adoc[]
 
 ==== A request example with CURL
 
-include::{snippets}/get-home-directory/curl-request.adoc[]
-
+include::{snippets}/files-controller-tests/test-get-home-directory/curl-request.adoc[]
 
 
 [[files-status]]
 === Get status of a file/directory
 
+This is a `GET` request to `/files/status`. 
+
+==== The request parameters
+
+It accepts the following request parameters:
+include::{snippets}/files-controller-tests/test-get-file-status-y1/request-parameters.adoc[]
+
+==== The response
+
+The overall response is as follows:
+include::{snippets}/files-controller-tests/test-get-file-status-y1/response-fields.adoc[]
+
+The `result` part in detail:
+include::{snippets}/files-controller-tests/test-get-file-status-y1/response-fields-result.adoc[]
+
+==== A request/response example
+
+A typical request/response exhange is the following (note that, for this kind of request, 
+`pathSuffix` will always be empty):
+
+include::{snippets}/files-controller-tests/test-get-file-status-y1/http-request.adoc[]
+
+include::{snippets}/files-controller-tests/test-get-file-status-y1/http-response.adoc[]
+
+==== A request example with CURL
+
+include::{snippets}/files-controller-tests/test-get-file-status-y1/curl-request.adoc[]
+
+==== Errors
+
 _Todo_
+
 
 [[files-liststatus]]
 === List a directory
+
+This is a `GET` request to `/files/list-status`. 
+
+==== The request parameters
+
+It accepts the following request parameters:
+include::{snippets}/files-controller-tests/test-list-status/request-parameters.adoc[]
+
+==== The response
+
+The overall response is as follows:
+include::{snippets}/files-controller-tests/test-list-status/response-fields.adoc[]
+
+The `result` part in detail:
+include::{snippets}/files-controller-tests/test-list-status/response-fields-result.adoc[]
+
+==== A request/response example
+
+A typical request/response exhange is the following (note that, for this kind of request, 
+`pathSuffix` will always a non-empty file/directory name):
+
+include::{snippets}/files-controller-tests/test-list-status/http-request.adoc[]
+
+include::{snippets}/files-controller-tests/test-list-status/http-response.adoc[]
+
+==== A request example with CURL
+
+include::{snippets}/files-controller-tests/test-list-status/curl-request.adoc[]
+
+==== Errors
 
 _Todo_
 

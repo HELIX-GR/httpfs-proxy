@@ -1,5 +1,9 @@
 package gr.helix.httpfsproxy.config;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +19,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 
 @Configuration
@@ -26,6 +33,20 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
     
     @Autowired
     UserDetailsService userService;
+    
+    private RequestMatcher csrfProtectionRequestMatcher = new RequestMatcher()
+    {
+        final Set<String> allowedMethods = new HashSet<>(Arrays.asList("GET", "OPTIONS", "HEAD", "TRACE"));
+        
+        final RequestMatcher excludePathMatcher = new OrRequestMatcher(
+            new AntPathRequestMatcher("/api/**"), new AntPathRequestMatcher("/admin/**"));
+        
+        @Override
+        public boolean matches(HttpServletRequest request)
+        {
+            return !allowedMethods.contains(request.getMethod()) && !excludePathMatcher.matches(request);
+        }
+    };
     
     @Override
     public void configure(WebSecurity security) throws Exception
@@ -67,14 +88,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
         security.httpBasic()
             .realmName("HttpFS-Proxy");
         
-        // Exclude certain requests from CSRF protection
-        
-        security.csrf().requireCsrfProtectionMatcher((HttpServletRequest req) -> {
-            String method = req.getMethod();
-            String servletPath = req.getServletPath();
-            return  (method.equals("POST") || method.equals("PUT") || method.equals("DELETE")) && 
-                !servletPath.startsWith("/files/") &&
-                !servletPath.startsWith("/admin/");
-        });
+        security.csrf()
+            .requireCsrfProtectionMatcher(csrfProtectionRequestMatcher);
     }
 }

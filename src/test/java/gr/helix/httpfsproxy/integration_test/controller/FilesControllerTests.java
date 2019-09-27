@@ -2,7 +2,9 @@ package gr.helix.httpfsproxy.integration_test.controller;
 
 import static org.junit.Assert.*;
 
+import java.net.URI;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.http.protocol.HTTP;
@@ -13,6 +15,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -22,10 +25,10 @@ import org.springframework.restdocs.JUnitRestDocumentation;
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation;
 import org.springframework.restdocs.payload.FieldDescriptor;
 import org.springframework.restdocs.payload.JsonFieldType;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.restdocs.payload.SubsectionDescriptor;
+import org.springframework.restdocs.request.ParameterDescriptor;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,17 +49,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.removeHeaders;
 import static org.springframework.restdocs.request.RequestDocumentation.*;
+import static org.springframework.restdocs.headers.HeaderDocumentation.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.*;
 
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
 
 @RunWith(SpringRunner.class)
 @ActiveProfiles("testing")
 @SpringBootTest
 @WebAppConfiguration
+@TestPropertySource(locations = { "FilesControllerTests.properties" })
 public class FilesControllerTests
 {
     @TestConfiguration
@@ -89,10 +99,16 @@ public class FilesControllerTests
     @Autowired
     private WebApplicationContext applicationContext;
     
-    /** 
-     * The entry point for server-side tests 
-     */
     private MockMvc mockmvc;
+    
+    @Value("${gr.helix.httpfsproxy.files-controller-tests.documentation.uri:https://httpfsproxy.example.net:8443/}")
+    private URI documentationUri;
+    
+    @Value("${gr.helix.httpfsproxy.files-controller-tests.sample-text-files:temp/1.txt,temp/2.txt}")
+    private List<String> sampleTextFiles;
+    
+    @Value("${gr.helix.httpfsproxy.files-controller-tests.sample-directory:temp}")
+    private String sampleDirectory;
     
     private final FieldDescriptor restresponseStatusField = fieldWithPath("status")
         .type(JsonFieldType.STRING)
@@ -106,6 +122,57 @@ public class FilesControllerTests
         .type(JsonFieldType.VARIES)
         .description("An array of error messages, or `null` on success");
     
+    private final ParameterDescriptor querystringPathParam = parameterWithName("path")
+        .description("A user-relative or absolute path on the HDFS filesystem");
+    
+    private final FieldDescriptor fieldstatusLengthField = fieldWithPath("length")
+        .type(JsonFieldType.NUMBER)
+        .description("The length of a file (in bytes), or zero if a directory");
+    
+    private final FieldDescriptor fieldstatusTypeField = fieldWithPath("type")
+        .type(JsonFieldType.STRING)
+        .description("The type of this enty. One of: `FILE`, `DIRECTORY`, `SYMLINK`");
+    
+    private final FieldDescriptor fieldstatusPathField = fieldWithPath("pathSuffix")
+        .type(JsonFieldType.STRING)
+        .description("A target-relative path");
+    
+    private final FieldDescriptor fieldstatusPermissionField = fieldWithPath("permission")
+        .type(JsonFieldType.STRING)
+        .description("The octal permission, e.g `644`");
+    
+    private final FieldDescriptor fieldstatusBlockSizeField = fieldWithPath("blockSize")
+        .type(JsonFieldType.NUMBER)
+        .description("The block size (in bytes)");
+    
+    private final FieldDescriptor fieldstatusModificationTimeField = fieldWithPath("modificationTime")
+        .type(JsonFieldType.NUMBER)
+        .description("The timestamp of last modification (in Epoch milliseconds)");
+    
+    private final FieldDescriptor fieldstatusAccessTimeField = fieldWithPath("accessTime")
+        .type(JsonFieldType.NUMBER)
+        .description("The timestamp of last access (in Epoch milliseconds)");
+    
+    private final FieldDescriptor fieldstatusReplicationField = fieldWithPath("replication")
+        .type(JsonFieldType.NUMBER)
+        .description("The replication factor for a file, or zero if a directory");
+    
+    private final FieldDescriptor fieldstatusOwnerField = fieldWithPath("owner")
+        .type(JsonFieldType.STRING)
+        .description("The owning user");
+    
+    private final FieldDescriptor fieldstatusGroupField = fieldWithPath("group")
+        .type(JsonFieldType.STRING)
+        .description("The owning group");
+    
+    private static final String[] ignoredResponseHeaders = new String[] {
+        "Pragma", 
+        "X-XSS-Protection", "X-Frame-Options", "X-Content-Type-Options",
+        "Strict-Transport-Security", "Cache-Control", "Expire"
+    };
+    
+    private static final String documentationSnippetNameTemplate = "{class-name}/{method-name}";
+    
     @Autowired
     private ObjectMapper jsonMapper;
     
@@ -118,50 +185,128 @@ public class FilesControllerTests
         // Initialize mock MVC 
         
         this.mockmvc = MockMvcBuilders.webAppContextSetup(this.applicationContext)
-            .apply(springSecurity()) // also simulate Spring-Security filter chain
+            .apply(springSecurity()) // add Spring-Security filter chain
             .apply(documentationConfiguration(this.restDocumentation)
                 .uris()
-                    .withHost("c2-httpfsproxy.hellenicdataservice.gr")
-                    .withScheme("https")
-                    .withPort(443))
-            .alwaysDo(document("{method-name}", 
-                preprocessRequest(prettyPrint()), 
-                preprocessResponse(prettyPrint())))
+                    .withHost(documentationUri.getHost())
+                    .withScheme(documentationUri.getScheme())
+                    .withPort(documentationUri.getPort()))
             .build();
     }
+   
+    //
+    // Helpers
+    //
     
-    @Test
-    public void getHomeDirectory() throws Exception
+    private void getHomeDirectory() throws Exception
     {
         final FieldDescriptor resultPathField = fieldWithPath("path")
             .type(JsonFieldType.STRING)
             .description("The absolute path to the home directory");
         
         final MvcResult mvcresult = mockmvc
-            .perform(get("/files/home-directory").with(user(user1)))
+            .perform(get("/files/home-directory")
+                .with(user(user1)))
+            //.andDo(print())
             .andExpect(status().isOk())
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andExpect(jsonPath("$.error").isEmpty())
             .andExpect(jsonPath("$.result.path")
                 .value(String.format("/user/%s", user1.getUsernameForHdfs())))
-            .andDo(document("{method-name}",
+            .andDo(document(documentationSnippetNameTemplate,
+                preprocessResponse(prettyPrint(), removeHeaders(ignoredResponseHeaders)),
                 // Document response at a high level
                 responseFields(
-                    restresponseStatusField, 
-                    restresponseErrorField, 
-                    restresponseResultField),
+                    restresponseStatusField, restresponseErrorField, restresponseResultField),
                 // Document nested `result` object for a /files/home-directory request
                 responseFields(
-                    beneathPath("result").withSubsectionId("result"), 
-                    resultPathField) 
+                    beneathPath("result").withSubsectionId("result"), resultPathField) 
                 ))
             .andReturn();
+    }
+    
+    private void getFileStatus(String filePath) throws Exception
+    {
+        FieldDescriptor resultStatusField = subsectionWithPath("status")
+            .type(JsonFieldType.OBJECT)
+            .description("An object holding the <<resources-filestatus,file status>> of target path");
         
-        System.err.printf("%n ** GET %s: HTTP %s - Received: -- %n%s%n",
-            mvcresult.getRequest().getServletPath(),
-            mvcresult.getResponse().getStatus(), 
-            mvcresult.getResponse().getContentAsString());
+        final MvcResult mvcresult = mockmvc
+            .perform(get("/files/status").param("path", filePath)
+                .with(user(user1)))
+            //.andDo(print())
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andExpect(jsonPath("$.error").isEmpty())
+            .andExpect(jsonPath("$.result.status").isNotEmpty())
+            .andDo(document(documentationSnippetNameTemplate,
+                preprocessResponse(prettyPrint(), removeHeaders(ignoredResponseHeaders)),
+                requestParameters(querystringPathParam),
+                // Document response at a high level
+                responseFields(
+                    restresponseStatusField, restresponseErrorField, restresponseResultField),
+                // Document nested `result` object for a /files/status request
+                responseFields(
+                    beneathPath("result").withSubsectionId("result"), resultStatusField),
+                responseFields(
+                    beneathPath("result.status").withSubsectionId("result-status"),
+                    fieldstatusTypeField, fieldstatusLengthField, fieldstatusPathField,
+                    fieldstatusPermissionField, fieldstatusBlockSizeField, fieldstatusReplicationField,
+                    fieldstatusAccessTimeField, fieldstatusModificationTimeField,
+                    fieldstatusOwnerField, fieldstatusGroupField)
+                ))
+            .andReturn();
+    }
+    
+    private void listStatus(String filePath) throws Exception
+    {
+        FieldDescriptor resultStatusesField = subsectionWithPath("statuses")
+            .type(JsonFieldType.ARRAY)
+            .description("An array of <<resources-filestatus,file status>> objects");
+        
+        final MvcResult mvcresult = mockmvc
+            .perform(get("/files/list-status").param("path", filePath)
+                .with(user(user1)))
+            //.andDo(print())
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andExpect(jsonPath("$.error").isEmpty())
+            .andExpect(jsonPath("$.result.statuses").isArray())
+            .andDo(document(documentationSnippetNameTemplate,
+                preprocessResponse(prettyPrint(), removeHeaders(ignoredResponseHeaders)),
+                requestParameters(querystringPathParam),
+                // Document response at a high level
+                responseFields(
+                    restresponseStatusField, restresponseErrorField, restresponseResultField),
+                // Document nested `result` object for a /files/status request
+                responseFields(
+                    beneathPath("result").withSubsectionId("result"), resultStatusesField)
+             ))
+            .andReturn();
+    }
+    
+    //
+    // Tests
+    //
+    
+    @Test
+    public void testGetHomeDirectory() throws Exception
+    {
+        getHomeDirectory();
     }
 
+    @Test
+    public void testGetFileStatusY1() throws Exception
+    {
+        getFileStatus(sampleTextFiles.get(0));
+    }
+    
+    @Test
+    public void testListStatus() throws Exception
+    {
+        listStatus(sampleDirectory);
+    }
 }

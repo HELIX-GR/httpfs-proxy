@@ -299,7 +299,9 @@
                             <doctype>book</doctype>
                             <attributes>
                                 <snippets>${project.build.directory}/generated-snippets</snippets>
-                                <version>${project.version}</version>
+                                <project-version>${project.version}</project-version>
+                                <!-- downloaded from https://github.com/asciidoctor/asciidoctor-stylesheet-factory/tree/gh-pages -->
+                                <stylesheet>asciidoctor.css</stylesheet>
                             </attributes>
                         </configuration>
                     </execution>
