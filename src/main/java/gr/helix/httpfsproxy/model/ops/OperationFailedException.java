@@ -64,6 +64,8 @@ public class OperationFailedException extends Exception
             return new PermissionDeniedException(exceptionMessage, statusLine);
         } else if (exceptionName.equalsIgnoreCase("FileNotFoundException")) {
             return new FileNotExistsException(exceptionMessage, statusLine);
+        } else if (exceptionName.equalsIgnoreCase("FileAlreadyExistsException")) {
+            return new FileAlreadyExistsException(exceptionMessage, statusLine);
         } else {
             return new OperationFailedException(exceptionMessage, statusLine);
         }

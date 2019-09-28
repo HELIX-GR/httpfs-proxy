@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.Optional;
 
 import javax.validation.ConstraintViolationException;
@@ -14,12 +15,15 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +35,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -46,10 +53,13 @@ import gr.helix.httpfsproxy.model.controller.FileChecksumResult;
 import gr.helix.httpfsproxy.model.controller.FileStatusResult;
 import gr.helix.httpfsproxy.model.controller.FilePathResult;
 import gr.helix.httpfsproxy.model.controller.ListStatusResult;
+import gr.helix.httpfsproxy.model.ops.AppendToFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.BooleanResponse;
 import gr.helix.httpfsproxy.model.ops.ContentSummary;
 import gr.helix.httpfsproxy.model.ops.ContentSummaryResponse;
+import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.EnumOperation;
+import gr.helix.httpfsproxy.model.ops.FileAlreadyExistsException;
 import gr.helix.httpfsproxy.model.ops.FileChecksum;
 import gr.helix.httpfsproxy.model.ops.FileNotExistsException;
 import gr.helix.httpfsproxy.model.ops.FileStatus;
@@ -69,7 +79,7 @@ import lombok.NonNull;
 
 @Controller
 @Validated
-@RequestMapping(path = { "/files", "/f" })
+@RequestMapping(path = { "/fs" })
 public class FilesController
 {
     private final static Logger logger = LoggerFactory.getLogger(FilesController.class);
@@ -108,6 +118,14 @@ public class FilesController
     @Qualifier("makeDirectoryTemplate")
     private OperationTemplate<MakeDirectoryRequestParameters, BooleanResponse> makeDirectoryTemplate;
     
+    @Autowired
+    @Qualifier("createFileTemplate")
+    private OperationTemplate<CreateFileRequestParameters, Void> createFileTemplate;
+    
+    @Autowired
+    @Qualifier("appendToFileTemplate")
+    private OperationTemplate<AppendToFileRequestParameters, Void> appendToFileTemplate;
+    
     @ModelAttribute("userDetails")
     SimpleUserDetails userDetails(Authentication authentication)
     {
@@ -121,7 +139,7 @@ public class FilesController
     @ExceptionHandler({ValidationException.class})
     @ResponseStatus(code = HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public RestResponse<?> handleException(ValidationException ex)
+    RestResponse<?> handleException(ValidationException ex)
     {
         return RestResponse.error("constraint validation has failed: " + ex.getMessage());
     }
@@ -129,7 +147,7 @@ public class FilesController
     @ExceptionHandler({IllegalArgumentException.class})
     @ResponseStatus(code = HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public RestResponse<?> handleException(IllegalArgumentException ex)
+    RestResponse<?> handleException(IllegalArgumentException ex)
     {
         return RestResponse.error("invalid argument: " + ex.getMessage());
     }
@@ -137,23 +155,31 @@ public class FilesController
     @ExceptionHandler({PermissionDeniedException.class})
     @ResponseStatus(code = HttpStatus.FORBIDDEN)
     @ResponseBody
-    public RestResponse<?> handleException(PermissionDeniedException ex)
+    RestResponse<?> handleException(PermissionDeniedException ex)
     {
         return RestResponse.error("operation fails because it lacks permission: " + ex.getMessage());
     }
     
     @ExceptionHandler({FileNotExistsException.class})
-    @ResponseStatus(code = HttpStatus.BAD_REQUEST)
+    @ResponseStatus(code = HttpStatus.NOT_FOUND)
     @ResponseBody
-    public RestResponse<?> handleException(FileNotExistsException ex)
+    RestResponse<?> handleException(FileNotExistsException ex)
     {
         return RestResponse.error("operation fails because file does not exist: " + ex.getMessage());
+    }
+    
+    @ExceptionHandler({FileAlreadyExistsException.class})
+    @ResponseStatus(code = HttpStatus.CONFLICT)
+    @ResponseBody
+    RestResponse<?> handleException(FileAlreadyExistsException ex)
+    {
+        return RestResponse.error("operation fails because file already exists: " + ex.getMessage());
     }
     
     @ExceptionHandler({InvalidParameterException.class})
     @ResponseStatus(code = HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public RestResponse<?> handleException(InvalidParameterException ex)
+    RestResponse<?> handleException(InvalidParameterException ex)
     {
         return RestResponse.error("operation fails due to invalid parameter: " + ex.getMessage());
     }
@@ -161,7 +187,7 @@ public class FilesController
     @ExceptionHandler({OperationFailedException.class})
     @ResponseStatus(code = HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public RestResponse<?> handleException(OperationFailedException ex)
+    RestResponse<?> handleException(OperationFailedException ex)
     {
         return RestResponse.error("operation failed: " + ex.getMessage());
     }
@@ -169,7 +195,7 @@ public class FilesController
     @ExceptionHandler({IllegalStateException.class})
     @ResponseStatus(code = HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
-    public RestResponse<?> handleException(IllegalStateException ex)
+    RestResponse<?> handleException(IllegalStateException ex)
     {
         return RestResponse.error("server encountered an unexpected state: " + ex.getMessage());
     }
@@ -177,15 +203,21 @@ public class FilesController
     @ExceptionHandler({IOException.class})
     @ResponseStatus(code = HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
-    public RestResponse<?> handleException(IOException ex)
+    RestResponse<?> handleException(IOException ex)
     {
         return RestResponse.error("server encountered an i/o error: " + ex.getMessage());
     }
 
+    URI uriForStatus(String filePath) throws Exception
+    {
+        FilesController controller = MvcUriComponentsBuilder.controller(FilesController.class);
+        return MvcUriComponentsBuilder.fromMethodCall(controller.getStatus(null, filePath))
+            .build().toUri();
+    }
+    
     @GetMapping(path = "/home-directory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getHomeDirectory(
-        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails)
             throws Exception
     {
@@ -206,9 +238,8 @@ public class FilesController
     @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getStatus(
-        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam("path") String filePath)
+        @RequestParam(name = "path") String filePath)
             throws Exception  
     {
         final HttpUriRequest request1 = getFileStatusTemplate
@@ -228,9 +259,8 @@ public class FilesController
     @GetMapping(path = "/summary", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getSummary(
-        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam("path") String filePath)
+        @RequestParam(name = "path") String filePath)
             throws Exception  
     {
         final HttpUriRequest request1 = getContentSummaryTemplate
@@ -247,12 +277,11 @@ public class FilesController
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/checksum", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/file/checksum", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getFileChecksum(
-        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam("path") String filePath)
+        @RequestParam(name = "path") String filePath)
             throws Exception  
     {
         final HttpUriRequest request1 = getFileChecksumTemplate
@@ -274,7 +303,7 @@ public class FilesController
     public RestResponse<?> listStatus(
         @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam("path") String filePath)
+        @RequestParam(name = "path") String filePath)
             throws Exception
     {
         final HttpUriRequest request1 = listStatusTemplate
@@ -291,11 +320,10 @@ public class FilesController
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/content", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(path = "/file/content", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> download(
-        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam("path") String filePath,
+        @RequestParam(name = "path") String filePath,
         @RequestParam(name = "length", required = false) @Min(0) Long length,
         @RequestParam(name = "offset", required = false) @Min(0) Long offset) 
             throws Exception
@@ -340,19 +368,19 @@ public class FilesController
             .body(body);
     }
     
-    @PostMapping(path = "/directory", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(path = "/directory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public ResponseEntity<?> makeDirectory(
-        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam("path") String filePath, 
-        @RequestParam(name  = "permission", defaultValue = "775") String permission)
+        @RequestParam(name = "path") String filePath, 
+        @RequestParam(name = "permission", required = false) String permission)
             throws Exception
     {
         final MakeDirectoryRequestParameters parameters = MakeDirectoryRequestParameters.of(permission);
         
         final HttpUriRequest request1 = makeDirectoryTemplate
             .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
+        logger.debug("makeDirectory: {}", request1);
         
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
             makeDirectoryTemplate.failForStatus(response1);
@@ -360,13 +388,64 @@ public class FilesController
             Assert.state(r.getFlag(), "Expected flag to always be true!");
         }
         
-        // Redirect to the status URI of this directory
+        return ResponseEntity.created(uriForStatus(filePath)).<Void>build();
+    }
+    
+    @PutMapping(path = "/file/content", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<?> createFile(
+        @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
+        @RequestHeader(name = HttpHeaders.CONTENT_TYPE) MediaType contentType,
+        @RequestParam("path") String filePath, 
+        @RequestParam(name  = "overwrite", required = false) Boolean overwrite,
+        @RequestParam(name  = "permission", required = false) String permission,
+        @RequestBody InputStreamResource inputStreamResource) 
+            throws Exception
+    {
+        if (!contentType.equals(MediaType.APPLICATION_OCTET_STREAM))
+            throw new IllegalArgumentException(
+                "Expected content of type " + MediaType.APPLICATION_OCTET_STREAM);
         
-        final FilesController controller = MvcUriComponentsBuilder.controller(FilesController.class);
-        final URI redirectUri = MvcUriComponentsBuilder
-            .fromMethodCall(controller.getStatus(null, null, filePath))
-            .build().toUri();
+        final CreateFileRequestParameters parameters = new CreateFileRequestParameters();
+        if (permission != null) 
+            parameters.setPermission(permission);
+        if (overwrite != null) 
+            parameters.setOverwrite(overwrite);
         
-        return ResponseEntity.created(redirectUri).<Void>build();
+        final HttpUriRequest request1 = createFileTemplate
+            .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters, 
+                inputStreamResource.getInputStream());
+        logger.debug("createFile: {}", request1);
+        
+        try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
+            createFileTemplate.failForStatus(response1);
+        }
+        
+        return ResponseEntity.created(uriForStatus(filePath)).<Void>build();
+    }
+    
+    @PostMapping(path = "/file/content", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<?> appendToFile(
+        @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
+        @RequestHeader(name = HttpHeaders.CONTENT_TYPE) MediaType contentType,
+        @RequestParam("path") String filePath,
+        @RequestBody InputStreamResource inputStreamResource)
+            throws Exception
+    {
+        if (!contentType.equals(MediaType.APPLICATION_OCTET_STREAM))
+            throw new IllegalArgumentException(
+                "Expected content of type " + MediaType.APPLICATION_OCTET_STREAM);
+        
+        final HttpUriRequest request1 = appendToFileTemplate
+            .requestForPath(userDetails.getUsernameForHdfs(), filePath, 
+                inputStreamResource.getInputStream());
+        logger.debug("appendToFile: {}", request1);
+        
+        try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
+            appendToFileTemplate.failForStatus(response1);
+        }
+        
+        return ResponseEntity.created(uriForStatus(filePath)).<Void>build();
     }
 }
