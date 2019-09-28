@@ -61,7 +61,7 @@ public class PingService
             if (responseStatus.getStatusCode() != HttpStatus.SC_OK)
                 throw new HttpResponseException(responseStatus.getStatusCode(), responseStatus.getReasonPhrase());
             final GetHomeDirectoryResponse r = 
-                getHomeDirectoryTemplate.responseFromHttpEntity(response.getEntity());
+                getHomeDirectoryTemplate.responseFromEntity(response.getEntity());
             if (!expectedHomeDirectory.equals(r.getPath()))
                 throw new IllegalStateException("Expected key [Path] to hold the user\'s home directory!");
         }   

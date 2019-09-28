@@ -50,12 +50,14 @@ import gr.helix.httpfsproxy.model.ops.ContentSummaryResponse;
 import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.DeleteFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.FileChecksum;
+import gr.helix.httpfsproxy.model.ops.FileNotExistsException;
 import gr.helix.httpfsproxy.model.ops.FileStatus;
 import gr.helix.httpfsproxy.model.ops.GetFileChecksumResponse;
 import gr.helix.httpfsproxy.model.ops.GetFileStatusResponse;
 import gr.helix.httpfsproxy.model.ops.GetHomeDirectoryResponse;
 import gr.helix.httpfsproxy.model.ops.ListStatusResponse;
 import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
+import gr.helix.httpfsproxy.model.ops.OperationFailedException;
 import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.SetOwnerRequestParameters;
 import gr.helix.httpfsproxy.model.ops.SetPermissionRequestParameters;
@@ -230,18 +232,15 @@ public class OperationTests
         this.userName = backend.getDefaultUser();
     }
     
-    private List<FileStatus> listStatus(String path) throws IOException
+    private List<FileStatus> listStatus(String path) throws Exception
     {
         HttpUriRequest request = listStatusTemplate.requestForPath(userName, path);
         System.err.println(" * " + request);
         
         ListStatusResponse r = null;
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            r = listStatusTemplate.responseFromHttpEntity(e);
+            listStatusTemplate.failForStatus(response);
+            r = listStatusTemplate.responseFromEntity(response.getEntity());
             assertNotNull(r);
             assertThat(r, hasProperty("statusList", notNullValue()));
         }
@@ -249,18 +248,15 @@ public class OperationTests
         return r.getStatusList();
     }
 
-    private FileStatus getFileStatus(String path) throws IOException
+    private FileStatus getFileStatus(String path) throws Exception
     {
         HttpUriRequest request = getFileStatusTemplate.requestForPath(userName, path);
         System.err.println(" * " + request);
         
         GetFileStatusResponse r = null;
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            r = getFileStatusTemplate.responseFromHttpEntity(e);
+            getFileStatusTemplate.failForStatus(response);
+            r = getFileStatusTemplate.responseFromEntity(response.getEntity());
             assertNotNull(r);
             assertThat(r, hasProperty("fileStatus", notNullValue()));
         }
@@ -268,18 +264,17 @@ public class OperationTests
         return r.getFileStatus();
     }
     
-    private void getFileStatusOfNonExisitingFile(String path) throws IOException
+    private void getFileStatusOfNonExisitingFile(String path) throws Exception
     {
         HttpUriRequest request = getFileStatusTemplate.requestForPath(userName, path);
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_NOT_FOUND, responseStatus.getStatusCode());
+            getFileStatusTemplate.failForStatus(response);
         }
     }
     
-    private boolean makeDirectory(String path) throws IOException
+    private boolean makeDirectory(String path) throws Exception
     {
         MakeDirectoryRequestParameters parameters = 
             MakeDirectoryRequestParameters.of(DEFAULT_DIRECTORY_PERMISSION);
@@ -289,11 +284,8 @@ public class OperationTests
         
         BooleanResponse r = null;
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            r = makeDirectoryTemplate.responseFromHttpEntity(e);
+            makeDirectoryTemplate.failForStatus(response);
+            r = makeDirectoryTemplate.responseFromEntity(response.getEntity());
             assertNotNull(r);
             assertThat(r, hasProperty("flag", equalTo(Boolean.TRUE)));
         }
@@ -301,7 +293,7 @@ public class OperationTests
         return r.getFlag();
     }
     
-    private String createFileInDirectory(String dirPath, String filename, Object data) throws IOException
+    private String createFileInDirectory(String dirPath, String filename, Object data) throws Exception
     {
         final String path = StringUtils.applyRelativePath(dirPath, filename);
         
@@ -318,17 +310,14 @@ public class OperationTests
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_CREATED, responseStatus.getStatusCode());
-            HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            assertNull(createFileTemplate.responseFromHttpEntity(e));
+            createFileTemplate.failForStatus(response);
+            assertNull(createFileTemplate.responseFromEntity(response.getEntity()));
         }
         
         return path;
     }
     
-    private void appendToFile(String path, Object data) throws IOException
+    private void appendToFile(String path, Object data) throws Exception
     {
         final AppendToFileRequestParameters parameters = new AppendToFileRequestParameters();
         
@@ -340,15 +329,12 @@ public class OperationTests
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            assertNull(appendToFileTemplate.responseFromHttpEntity(e));
+            appendToFileTemplate.failForStatus(response);
+            assertNull(appendToFileTemplate.responseFromEntity(response.getEntity()));
         }
     }
     
-    private void appendToNonExistingFile(String path, Object data) throws IOException
+    private void appendToNonExistingFile(String path, Object data) throws Exception
     {
         final AppendToFileRequestParameters parameters = new AppendToFileRequestParameters();
         
@@ -359,38 +345,33 @@ public class OperationTests
             request = appendToFileTemplate.requestForPath(userName, path, parameters, (byte[]) data);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_NOT_FOUND, responseStatus.getStatusCode());
+            appendToFileTemplate.failForStatus(response);
         }
     }
     
-    private FileChecksum getFileChecksum(String path) throws IOException
+    private FileChecksum getFileChecksum(String path) throws Exception
     {
         GetFileChecksumResponse r = null;
         HttpUriRequest request = getFileChecksumTemplate.requestForPath(userName, path);
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            r = getFileChecksumTemplate.responseFromHttpEntity(e);
+            getFileChecksumTemplate.failForStatus(response);
+            r = getFileChecksumTemplate.responseFromEntity(response.getEntity());
             assertThat(r, hasProperty("checksum", notNullValue()));
             assertThat(r.getChecksum(), hasProperty("checksumAsHexString", notNullValue()));
         }
         return r.getChecksum();
     }
     
-    private String readTextFile(String path) throws IOException
+    private String readTextFile(String path) throws Exception
     {
         HttpUriRequest request = readFileTemplate.requestForPath(userName, path);
         System.err.println(" * " + request);
         
         String text = null;
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            readFileTemplate.failForStatus(response);
             final HttpEntity e = response.getEntity();
             assertNotNull(e);
             final ContentType t = ContentType.getOrDefault(e);
@@ -401,7 +382,7 @@ public class OperationTests
         return text;
     }
     
-    private String concatenateFiles(String path, String ...sourcePaths) throws IOException
+    private String concatenateFiles(String path, String ...sourcePaths) throws Exception
     {
         ConcatenateFilesRequestParameters parameters = new ConcatenateFilesRequestParameters();
         parameters.setSources(Arrays.asList(sourcePaths));
@@ -410,17 +391,14 @@ public class OperationTests
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            final HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            assertNull(concatenateFilesTemplate.responseFromHttpEntity(e));
+            concatenateFilesTemplate.failForStatus(response);
+            assertNull(concatenateFilesTemplate.responseFromEntity(response.getEntity()));
         }
         
         return path;
     }
     
-    private boolean truncateFile(String path) throws IOException
+    private boolean truncateFile(String path) throws Exception
     {
         TruncateFileRequestParameters parameters = new TruncateFileRequestParameters();
         
@@ -429,11 +407,8 @@ public class OperationTests
         
         BooleanResponse r = null;
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            final HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            r = truncateFileTemplate.responseFromHttpEntity(e);
+            truncateFileTemplate.failForStatus(response);
+            r = truncateFileTemplate.responseFromEntity(response.getEntity());
             assertNotNull(r);
             assertThat(r, hasProperty("flag", equalTo(Boolean.TRUE)));
         }
@@ -441,7 +416,7 @@ public class OperationTests
         return r.getFlag();
     }
     
-    private boolean deleteFile(String path) throws IOException
+    private boolean deleteFile(String path) throws Exception
     {
         DeleteFileRequestParameters parameters = DeleteFileRequestParameters.of(false);
         
@@ -450,11 +425,8 @@ public class OperationTests
         
         BooleanResponse r = null;
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            final HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            r = deleteFileTemplate.responseFromHttpEntity(e);
+            deleteFileTemplate.failForStatus(response);
+            r = deleteFileTemplate.responseFromEntity(response.getEntity());
             assertNotNull(r);
             assertThat(r, hasProperty("flag", equalTo(Boolean.TRUE)));
         }
@@ -462,7 +434,7 @@ public class OperationTests
         return r.getFlag();
     }
     
-    private void deleteNonEmptyDirectory(String path) throws IOException
+    private void deleteNonEmptyDirectory(String path) throws Exception
     {
         DeleteFileRequestParameters parameters = DeleteFileRequestParameters.of(false);
         
@@ -471,12 +443,11 @@ public class OperationTests
         
         // Trying to delete an non-empty directory results to HTTP 500
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertNotEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            deleteFileTemplate.failForStatus(response);
         }
     }
     
-    private void deleteRecursiveNonEmptyDirectory(String path) throws IOException
+    private void deleteRecursiveNonEmptyDirectory(String path) throws Exception
     {
         DeleteFileRequestParameters parameters = DeleteFileRequestParameters.of(true);
         
@@ -484,23 +455,19 @@ public class OperationTests
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            deleteFileTemplate.failForStatus(response);
         }
     }
     
-    private ContentSummary getSummary(String path) throws IOException
+    private ContentSummary getSummary(String path) throws Exception
     {
         ContentSummaryResponse r = null;
         HttpUriRequest request = getContentSummaryTemplate.requestForPath("user", path);
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
-            final HttpEntity e = response.getEntity();
-            assertNotNull(e);
-            r = getContentSummaryTemplate.responseFromHttpEntity(e);
+            getContentSummaryTemplate.failForStatus(response);
+            r = getContentSummaryTemplate.responseFromEntity(response.getEntity());
             assertNotNull(r);
             assertThat(r, hasProperty("summary", notNullValue()));
         }
@@ -508,19 +475,17 @@ public class OperationTests
         return r.getSummary();
     }
     
-    private void getSummaryOfNonExistingPath(String path) throws IOException
+    private void getSummaryOfNonExistingPath(String path) throws Exception
     {
-        ContentSummaryResponse r = null;
         HttpUriRequest request = getContentSummaryTemplate.requestForPath("user", path);
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_NOT_FOUND, responseStatus.getStatusCode());
+            getContentSummaryTemplate.failForStatus(response);
         }
     }
     
-    private void setPermission(String path, String permission) throws IOException
+    private void setPermission(String path, String permission) throws Exception
     {
         SetPermissionRequestParameters parameters = SetPermissionRequestParameters.of(permission);
         
@@ -528,12 +493,11 @@ public class OperationTests
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            setPermissionTemplate.failForStatus(response);
         }
     }
     
-    private void setReplication(String path, int replication) throws IOException
+    private void setReplication(String path, int replication) throws Exception
     {
         SetReplicationRequestParameters parameters = SetReplicationRequestParameters.of(replication);
         
@@ -541,8 +505,7 @@ public class OperationTests
         System.err.println(" * " + request);
         
         try (CloseableHttpResponse response = httpClient.execute(request)) {
-            final StatusLine responseStatus = response.getStatusLine();
-            assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
+            setReplicationTemplate.failForStatus(response);
         }
     }
     
@@ -560,41 +523,41 @@ public class OperationTests
             assertEquals(HttpStatus.SC_OK, responseStatus.getStatusCode());
             HttpEntity e = response.getEntity();
             assertNotNull(e);
-            GetHomeDirectoryResponse r = getHomeDirectoryTemplate.responseFromHttpEntity(e);
+            GetHomeDirectoryResponse r = getHomeDirectoryTemplate.responseFromEntity(e);
             assertNotNull(r);
             assertThat(r, hasProperty("path", equalTo(String.format("/user/%s", userName))));
         }   
     }
     
     @Test
-    public void test02a_listStatusInHomeDirectory() throws IOException
+    public void test02a_listStatusInHomeDirectory() throws Exception
     {
         List<FileStatus> r = listStatus("");
         assertThat(r, not(empty()));
     }
     
     @Test
-    public void test02b_listStatusInRootDirectory() throws IOException
+    public void test02b_listStatusInRootDirectory() throws Exception
     {
         List<FileStatus> r = listStatus("/");
         assertThat(r, not(empty()));
     }
     
     @Test
-    public void test03a_makeTempDirectory() throws IOException
+    public void test03a_makeTempDirectory() throws Exception
     {
         makeDirectory(tempDir);
     }
     
     @Test
-    public void test03b_listStatusInTempDirectory() throws IOException
+    public void test03b_listStatusInTempDirectory() throws Exception
     {
         List<FileStatus> r = listStatus(tempDir);
         assertThat(r, empty());
     }
     
     @Test
-    public void test03c_getStatusInTempDirectory() throws IOException
+    public void test03c_getStatusInTempDirectory() throws Exception
     {
         FileStatus r = getFileStatus(tempDir);
         assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.DIRECTORY)));
@@ -603,7 +566,7 @@ public class OperationTests
     }
     
     @Test
-    public void test04a_d1_createTextInTempDirectory() throws IOException
+    public void test04a_d1_createTextInTempDirectory() throws Exception
     {        
         String path = createFileInDirectory(tempDir, "data1-a.txt", fixture01.getText().getBytes());
         FileChecksum checksum = getFileChecksum(path);
@@ -611,7 +574,7 @@ public class OperationTests
     }
     
     @Test
-    public void test04a_d2_createTextInTempDirectory() throws IOException
+    public void test04a_d2_createTextInTempDirectory() throws Exception
     {        
         String path = createFileInDirectory(tempDir, "data2-a.txt", fixture02.getText().getBytes());
         FileChecksum checksum = getFileChecksum(path);
@@ -619,7 +582,7 @@ public class OperationTests
     }
     
     @Test
-    public void test04a_d3_createTextInTempDirectory() throws IOException
+    public void test04a_d3_createTextInTempDirectory() throws Exception
     {        
         String path = createFileInDirectory(tempDir, "data3-a.txt", fixture03.readText().getBytes());
         FileChecksum checksum = getFileChecksum(path);
@@ -627,7 +590,7 @@ public class OperationTests
     }
     
     @Test
-    public void test04b_d1_createTextInTempDirectory() throws IOException
+    public void test04b_d1_createTextInTempDirectory() throws Exception
     {        
         ByteArrayInputStream in = new ByteArrayInputStream(fixture01.getText().getBytes());
         String path = createFileInDirectory(tempDir, "data1-b.txt", in);
@@ -636,7 +599,7 @@ public class OperationTests
     }
     
     @Test
-    public void test04b_d2_createTextInTempDirectory() throws IOException
+    public void test04b_d2_createTextInTempDirectory() throws Exception
     {        
         ByteArrayInputStream in = new ByteArrayInputStream(fixture02.getText().getBytes());
         String path = createFileInDirectory(tempDir, "data2-b.txt", in);
@@ -645,7 +608,7 @@ public class OperationTests
     }
  
     @Test
-    public void test04b_d3_createTextInTempDirectory() throws IOException
+    public void test04b_d3_createTextInTempDirectory() throws Exception
     {   
         String path = null;
         try (InputStream in = fixture03.getResource().getInputStream()) { 
@@ -656,14 +619,14 @@ public class OperationTests
     }
     
     @Test
-    public void test04z_listStatusInTempDirectory() throws IOException
+    public void test04z_listStatusInTempDirectory() throws Exception
     {
         List<FileStatus> r = listStatus(tempDir);
         assertThat(r, not(empty()));
     }
     
     @Test
-    public void test04z_d1_getFileStatus() throws IOException
+    public void test04z_d1_getFileStatus() throws Exception
     {
         FileStatus r = getFileStatus(StringUtils.applyRelativePath(tempDir, "data1-a.txt"));
         assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.FILE)));
@@ -674,7 +637,7 @@ public class OperationTests
     }
     
     @Test
-    public void test04z_d2_getFileStatus() throws IOException
+    public void test04z_d2_getFileStatus() throws Exception
     {
         FileStatus r = getFileStatus(StringUtils.applyRelativePath(tempDir, "data2-a.txt"));
         assertThat(r, hasProperty("type", equalTo(FileStatus.EnumType.FILE)));
@@ -684,14 +647,14 @@ public class OperationTests
         assertThat(r, hasProperty("replication", greaterThanOrEqualTo(2)));
     }
     
-    @Test
-    public void test04z_getFileStatusOfNonExistingFile() throws IOException
+    @Test(expected = FileNotExistsException.class)
+    public void test04z_getFileStatusOfNonExistingFile() throws Exception
     {
         getFileStatusOfNonExisitingFile(StringUtils.applyRelativePath(tempDir, "i-dont-exist.txt"));
     }
     
     @Test 
-    public void test05a_d12_appendTextToFile() throws IOException
+    public void test05a_d12_appendTextToFile() throws Exception
     {
         String name = "data12-a.txt";
         String path = createFileInDirectory(tempDir, name, fixture01.getText().getBytes());
@@ -701,7 +664,7 @@ public class OperationTests
     }
     
     @Test 
-    public void test05b_d12_appendTextToFile() throws IOException
+    public void test05b_d12_appendTextToFile() throws Exception
     {
         String name = "data12-b.txt";
         ByteArrayInputStream in1 = new ByteArrayInputStream(fixture01.getText().getBytes());
@@ -712,15 +675,15 @@ public class OperationTests
         assertThat(checksum, hasProperty("checksumAsHexString", equalTo(fixture01plus02.getChecksum())));
     }
     
-    @Test 
-    public void test05z_appendTextToNonExistingFile() throws IOException
+    @Test(expected = FileNotExistsException.class)
+    public void test05z_appendTextToNonExistingFile() throws Exception
     {
         String path = StringUtils.applyRelativePath(tempDir, "i-dont-exist.txt");
         appendToNonExistingFile(path, fixture01.getText().getBytes());
     }
     
     @Test // Note: must run after test04a_d1_createTextInTempDirectory
-    public void test06a_d1_readText() throws IOException
+    public void test06a_d1_readText() throws Exception
     {
         String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
         String textData = readTextFile(path);
@@ -728,7 +691,7 @@ public class OperationTests
     }
     
     @Test // Note: must run after test04a_d2_createTextInTempDirectory
-    public void test06a_d2_readText() throws IOException
+    public void test06a_d2_readText() throws Exception
     {
         String path = StringUtils.applyRelativePath(tempDir, "data2-a.txt");
         String textData = readTextFile(path);
@@ -736,7 +699,7 @@ public class OperationTests
     }
     
     @Test // Note: must run after test04a_d3_createTextInTempDirectory
-    public void test06a_d3_readText() throws IOException
+    public void test06a_d3_readText() throws Exception
     {
         String path = StringUtils.applyRelativePath(tempDir, "data3-a.txt");
         String textData = readTextFile(path);
@@ -744,7 +707,7 @@ public class OperationTests
     }
     
     @Test // Note: must run after test04a_d12_createTextInTempDirectory
-    public void test06a_d12_readText() throws IOException
+    public void test06a_d12_readText() throws Exception
     {
         String path = StringUtils.applyRelativePath(tempDir, "data12-a.txt");
         String textData = readTextFile(path);
@@ -753,7 +716,7 @@ public class OperationTests
     }
     
     @Test
-    public void test07a_d1_concatenateTextFiles() throws IOException
+    public void test07a_d1_concatenateTextFiles() throws Exception
     {
         String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", fixture01.getText().getBytes());
         // CONCAT expects the destination path to exist: create an empty file
@@ -764,7 +727,7 @@ public class OperationTests
     }
     
     @Test
-    public void test07a_d12_concatenateTextFiles() throws IOException
+    public void test07a_d12_concatenateTextFiles() throws Exception
     {
         String sourcePath1 = createFileInDirectory(tempDir, "data-part-1.txt", fixture01.getText().getBytes());
         String sourcePath2 = createFileInDirectory(tempDir, "data-part-2.txt", fixture02.getText().getBytes());
@@ -777,7 +740,7 @@ public class OperationTests
     }
     
     @Test
-    public void test08a_d1_truncateFile() throws IOException
+    public void test08a_d1_truncateFile() throws Exception
     {
         String path = createFileInDirectory(tempDir, "data1-a-to-be-truncated.txt", fixture01.getText().getBytes());
         FileStatus st0 = getFileStatus(path);
@@ -788,8 +751,8 @@ public class OperationTests
         assertThat(st1, hasProperty("length", equalTo(0L)));
     }
     
-    @Test
-    public void test09a_d1_deleteFile() throws IOException
+    @Test(expected = FileNotExistsException.class)
+    public void test09a_d1_deleteFile() throws Exception
     {
         String path = createFileInDirectory(tempDir, "data1-a-to-be-deleted.txt", fixture01.getText().getBytes());
         getFileStatus(path);
@@ -797,8 +760,8 @@ public class OperationTests
         getFileStatusOfNonExisitingFile(path);
     }
     
-    @Test
-    public void test09z_deleteNonEmptyDirectory() throws IOException
+    @Test(expected = OperationFailedException.class)
+    public void test09z_deleteNonEmptyDirectory() throws Exception
     {
         String dirName = String.format("sub-%05d", random.nextInt(100000));
         String dirPath = StringUtils.applyRelativePath(tempDir, dirName) + "/";
@@ -808,7 +771,7 @@ public class OperationTests
     }
     
     @Test
-    public void test09z_deleteRecursiveNonEmptyDirectory() throws IOException
+    public void test09z_deleteRecursiveNonEmptyDirectory() throws Exception
     {
         String dirName = String.format("sub-%05d", random.nextInt(100000));
         String dirPath = StringUtils.applyRelativePath(tempDir, dirName) + "/";
@@ -818,7 +781,7 @@ public class OperationTests
     }
     
     @Test // Note: must run after test04* tests that create content inside temporary directory
-    public void test10a_getSummaryInTempDirectory() throws IOException
+    public void test10a_getSummaryInTempDirectory() throws Exception
     {
         ContentSummary summary = getSummary(tempDir);
         assertThat(summary, hasProperty("fileCount", greaterThan(0)));
@@ -827,14 +790,14 @@ public class OperationTests
         assertThat(summary, hasProperty("spaceConsumed", greaterThan(0L)));
     }
     
-    @Test
-    public void test10b_getSummaryOfNonExistingDirectory() throws IOException
+    @Test(expected = FileNotExistsException.class)
+    public void test10b_getSummaryOfNonExistingDirectory() throws Exception
     {
         getSummaryOfNonExistingPath(StringUtils.applyRelativePath(tempDir, "i-dont-exist"));
     }
     
     @Test // Note: must run after test04_d1_* which creates examined file
-    public void test11a_d1_setPermission() throws IOException
+    public void test11a_d1_setPermission() throws Exception
     {
         String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
         FileStatus st0 = getFileStatus(path);
@@ -846,7 +809,7 @@ public class OperationTests
     }
     
     @Test // Note: must run after test04_d1_* which creates examined file
-    public void test12a_d1_setReplication() throws IOException
+    public void test12a_d1_setReplication() throws Exception
     {
         String path = StringUtils.applyRelativePath(tempDir, "data1-a.txt");
         FileStatus st0 = getFileStatus(path);

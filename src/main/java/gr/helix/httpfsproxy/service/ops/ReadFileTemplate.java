@@ -37,7 +37,7 @@ public class ReadFileTemplate extends AbstractGetOperationTemplate<ReadFileReque
     }
     
     @Override
-    public byte[] responseFromHttpEntity(@NotNull HttpEntity e)
+    public byte[] responseFromEntity(@NotNull HttpEntity e)
         throws JsonProcessingException, IOException
     {
         throw new UnsupportedOperationException("This operation returns a binary stream");

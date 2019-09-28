@@ -16,6 +16,9 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.client.utils.URIBuilder;
@@ -32,6 +35,9 @@ import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 
 import gr.helix.httpfsproxy.config.HttpFsServiceConfiguration;
 import gr.helix.httpfsproxy.model.ops.BaseRequestParameters;
+import gr.helix.httpfsproxy.model.ops.OperationFailedException;
+import gr.helix.httpfsproxy.model.ops.RemoteExceptionInfo;
+import gr.helix.httpfsproxy.model.ops.RemoteExceptionResponse;
 import gr.helix.httpfsproxy.validation.FilePath;
 
 public abstract class AbstractOperationTemplate <P extends BaseRequestParameters, R> implements OperationTemplate<P, R>
@@ -46,8 +52,12 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     private final static String BODY_REQUIRED_MESSAGE_FORMAT = 
         "This operation (%s) requires a request body";
     
-    private final static String CONTENT_TYPE_NOT_ALLOWED_MESSAGE_FORMAT = 
+    private final static String CONTENT_NOT_ALLOWED_MESSAGE_FORMAT = 
         "This operation (%s) does not allow a content-type of [%s]";
+    
+    private final static String CONTENT_TYPE_APPLICATION_JSON = "application/json";
+    
+    private final static String CONTENT_TYPE_APPLICATION_BINARY = "application/octet-stream";
     
     @Autowired
     private ObjectMapper objectMapper;
@@ -61,6 +71,11 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     protected HttpFsServiceConfiguration backend;
     
     protected abstract Class<R> responseType();
+    
+    /**
+     * The expected HTTP status for this operation to be considered successful
+     */
+    protected int expectedHttpStatusCode() { return HttpStatus.SC_OK; }
     
     /**
      * Are parameters required for this type of request? 
@@ -95,7 +110,8 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     protected Collection<ContentType> allowedContentTypes() { return null; };
         
     /**
-     * Choose a backend (as a base URI) to communicate with.
+     * Choose a back-end (as a base URI) to communicate with.
+     * 
      * <p>This implementation simply returns a random pick from our available URIs
      * (so, in effect, it operates in a round-robin manner).  
      */
@@ -103,6 +119,41 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     {
         final int b = backend.getBaseUris().size();
         return backend.getBaseUris().get(b < 2? 0 : random.nextInt(b));
+    }
+    
+    private void failForStatus1(HttpResponse response) 
+        throws OperationFailedException
+    {
+        final StatusLine responseStatus = response.getStatusLine();
+        if (responseStatus.getStatusCode() != this.expectedHttpStatusCode()) {
+            // This response represents a failed operation
+            final HttpEntity e = response.getEntity();
+            if (CONTENT_TYPE_APPLICATION_JSON.equals(e.getContentType().getValue())) {
+                InputStream in = null;
+                try {
+                    in = e.getContent();
+                } catch (UnsupportedOperationException | IOException ex) {
+                    throw new IllegalStateException("no content!", ex);
+                }
+                RemoteExceptionResponse x = null;
+                try {
+                    x = objectMapper.readValue(in, RemoteExceptionResponse.class);
+                } catch (IOException ex) {
+                    throw new IllegalStateException("content does not seem to be a RemoteException object", ex);
+                }
+                // Throw an, as specific as possible, exception of OperationFailedException
+                throw OperationFailedException.fromRemoteException(x.getExceptionInfo(), responseStatus);
+            } else {
+                // No exception object is present; just provide a generic message 
+                throw OperationFailedException.fromMessage("unknown exception happened", responseStatus);
+            }
+        }
+    }
+    
+    private R responseFromEntity1(HttpEntity e)
+        throws JsonProcessingException, IOException
+    {
+        return objectMapper.readValue(e.getContent(), this.responseType());
     }
     
     private void checkParameters(P parameters)
@@ -124,7 +175,7 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
             Collection<ContentType> allowedContentTypes = this.allowedContentTypes();
             if (allowedContentTypes != null && !allowedContentTypes.contains(contentType)) {
                 throw new IllegalStateException(
-                    String.format(CONTENT_TYPE_NOT_ALLOWED_MESSAGE_FORMAT, this.operation(), contentType));
+                    String.format(CONTENT_NOT_ALLOWED_MESSAGE_FORMAT, this.operation(), contentType));
             }
         }
     }
@@ -231,13 +282,21 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     //
     
     @Override
-    public R responseFromHttpEntity(@NotNull HttpEntity e) 
+    public void failForStatus(@NotNull HttpResponse response) 
+        throws OperationFailedException
+    {
+        failForStatus1(response);
+    }
+    
+    @Override
+    public R responseFromEntity(@NotNull HttpEntity e) 
         throws JsonProcessingException, IOException
     {
-        Assert.state(e.getContentType() != null, "Expected to find a content-type header");
-        Assert.state("application/json".equals(e.getContentType().getValue()), 
-            "Expected content encoded as JSON (application/json)");
-        return objectMapper.readValue(e.getContent(), this.responseType());
+        if (e.getContentType() == null) 
+            throw new IllegalStateException("Expected to find a Content-Type header");
+        if (!CONTENT_TYPE_APPLICATION_JSON.equals(e.getContentType().getValue())) 
+            throw new IllegalStateException("Expected content of type [" + CONTENT_TYPE_APPLICATION_JSON + "]") ;
+        return responseFromEntity1(e);
     }
     
     @Override
@@ -317,5 +376,4 @@ public abstract class AbstractOperationTemplate <P extends BaseRequestParameters
     {
         return requestForPath1(userName, filePath, parameters, data, this.defaultContentType());
     }
-    
 }

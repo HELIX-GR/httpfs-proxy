@@ -989,7 +989,7 @@ Content-Type: application/json;charset=UTF-8
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /files/status?path=temp%2FAesop.txt HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /files/status?path=samples%2FAesop.txt HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -1009,8 +1009,8 @@ Content-Type: application/json;charset=UTF-8
       "permission" : "644",
       "length" : 191943,
       "blockSize" : 67108864,
-      "accessTime" : 1569280423524,
-      "modificationTime" : 1569015350347,
+      "accessTime" : 1569579030600,
+      "modificationTime" : 1569579030785,
       "owner" : "user",
       "group" : "user",
       "replication" : 2
@@ -1025,7 +1025,7 @@ Content-Type: application/json;charset=UTF-8
 <h4 id="_a_request_example_with_curl_2"><a class="link" href="#_a_request_example_with_curl_2">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/files/status?path=temp%2FAesop.txt' -i -X GET</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/files/status?path=samples%2FAesop.txt' -i -X GET</code></pre>
 </div>
 </div>
 </div>
@@ -1134,7 +1134,7 @@ Content-Type: application/json;charset=UTF-8
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /files/list-status?path=temp HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /files/list-status?path=samples HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -1154,8 +1154,8 @@ Content-Type: application/json;charset=UTF-8
       "permission" : "644",
       "length" : 191943,
       "blockSize" : 67108864,
-      "accessTime" : 1569280423524,
-      "modificationTime" : 1569015350347,
+      "accessTime" : 1569579030600,
+      "modificationTime" : 1569579030785,
       "owner" : "user",
       "group" : "user",
       "replication" : 2
@@ -1165,19 +1165,19 @@ Content-Type: application/json;charset=UTF-8
       "permission" : "644",
       "length" : 28965453,
       "blockSize" : 67108864,
-      "accessTime" : 1569276773218,
-      "modificationTime" : 1569276773701,
+      "accessTime" : 1569579049069,
+      "modificationTime" : 1569579049570,
       "owner" : "user",
       "group" : "user",
       "replication" : 2
     }, {
       "type" : "DIRECTORY",
       "pathSuffix" : "x1",
-      "permission" : "775",
+      "permission" : "755",
       "length" : 0,
       "blockSize" : 0,
       "accessTime" : 0,
-      "modificationTime" : 1569280883981,
+      "modificationTime" : 1569579008307,
       "owner" : "user",
       "group" : "user",
       "replication" : 0
@@ -1188,7 +1188,7 @@ Content-Type: application/json;charset=UTF-8
       "length" : 0,
       "blockSize" : 0,
       "accessTime" : 0,
-      "modificationTime" : 1569142371698,
+      "modificationTime" : 1569579011412,
       "owner" : "user",
       "group" : "user",
       "replication" : 0
@@ -1203,7 +1203,7 @@ Content-Type: application/json;charset=UTF-8
 <h4 id="_a_request_example_with_curl_3"><a class="link" href="#_a_request_example_with_curl_3">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/files/list-status?path=temp' -i -X GET</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/files/list-status?path=samples' -i -X GET</code></pre>
 </div>
 </div>
 </div>

@@ -10,6 +10,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.springframework.stereotype.Service;
@@ -46,7 +47,13 @@ public class CreateFileTemplate extends AbstractPutOperationTemplate<CreateFileR
     }
     
     @Override
-    public Void responseFromHttpEntity(@NotNull HttpEntity e)
+    protected int expectedHttpStatusCode()
+    {
+        return HttpStatus.SC_CREATED;
+    }
+    
+    @Override
+    public Void responseFromEntity(@NotNull HttpEntity e)
         throws JsonProcessingException, IOException
     {
         return null; // this operation returns no response body

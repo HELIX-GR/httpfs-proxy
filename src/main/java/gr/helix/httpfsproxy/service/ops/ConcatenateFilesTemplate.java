@@ -38,7 +38,7 @@ public class ConcatenateFilesTemplate extends AbstractPostOperationTemplate<Conc
     }
     
     @Override
-    public Void responseFromHttpEntity(@NotNull HttpEntity e)
+    public Void responseFromEntity(@NotNull HttpEntity e)
         throws JsonProcessingException, IOException
     {
         return null; // this operation returns no response body

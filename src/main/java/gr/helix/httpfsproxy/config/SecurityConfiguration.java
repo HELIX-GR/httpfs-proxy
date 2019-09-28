@@ -39,7 +39,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter
         final Set<String> allowedMethods = new HashSet<>(Arrays.asList("GET", "OPTIONS", "HEAD", "TRACE"));
         
         final RequestMatcher excludePathMatcher = new OrRequestMatcher(
-            new AntPathRequestMatcher("/api/**"), new AntPathRequestMatcher("/admin/**"));
+            new AntPathRequestMatcher("/files/**"), new AntPathRequestMatcher("/admin/**"));
         
         @Override
         public boolean matches(HttpServletRequest request)

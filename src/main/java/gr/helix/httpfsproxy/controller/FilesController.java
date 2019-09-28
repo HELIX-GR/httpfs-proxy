@@ -3,9 +3,9 @@ package gr.helix.httpfsproxy.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 import java.util.Optional;
 
 import javax.validation.ConstraintViolationException;
@@ -35,7 +35,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import gr.helix.httpfsproxy.model.RestResponse;
 import gr.helix.httpfsproxy.model.SimpleUserDetails;
@@ -49,12 +51,16 @@ import gr.helix.httpfsproxy.model.ops.ContentSummary;
 import gr.helix.httpfsproxy.model.ops.ContentSummaryResponse;
 import gr.helix.httpfsproxy.model.ops.EnumOperation;
 import gr.helix.httpfsproxy.model.ops.FileChecksum;
+import gr.helix.httpfsproxy.model.ops.FileNotExistsException;
 import gr.helix.httpfsproxy.model.ops.FileStatus;
 import gr.helix.httpfsproxy.model.ops.GetFileChecksumResponse;
 import gr.helix.httpfsproxy.model.ops.GetFileStatusResponse;
 import gr.helix.httpfsproxy.model.ops.GetHomeDirectoryResponse;
+import gr.helix.httpfsproxy.model.ops.InvalidParameterException;
 import gr.helix.httpfsproxy.model.ops.ListStatusResponse;
 import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
+import gr.helix.httpfsproxy.model.ops.OperationFailedException;
+import gr.helix.httpfsproxy.model.ops.PermissionDeniedException;
 import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 import gr.helix.httpfsproxy.service.OperationTemplate;
@@ -63,9 +69,12 @@ import lombok.NonNull;
 
 @Controller
 @Validated
+@RequestMapping(path = { "/files", "/f" })
 public class FilesController
 {
     private final static Logger logger = LoggerFactory.getLogger(FilesController.class);
+    
+    private static final int READ_FILE_REQUEST_BUFFER_SIZE = 4096;
     
     @Autowired
     @Qualifier("httpClient")
@@ -109,14 +118,6 @@ public class FilesController
             .orElse(null);
     }
     
-    IllegalStateException wrapFailureAsException(
-        EnumOperation operation, HttpUriRequest request, org.apache.http.StatusLine statusLine)
-    {
-        String errMessage = String.format(
-            "The backend server failed on an operation of [%s]: %s", operation.name(), statusLine);
-        return new IllegalStateException(errMessage);
-    }
-    
     @ExceptionHandler({ValidationException.class})
     @ResponseStatus(code = HttpStatus.BAD_REQUEST)
     @ResponseBody
@@ -130,15 +131,39 @@ public class FilesController
     @ResponseBody
     public RestResponse<?> handleException(IllegalArgumentException ex)
     {
-        return RestResponse.error("got an invalid argument: " + ex.getMessage());
+        return RestResponse.error("invalid argument: " + ex.getMessage());
     }
     
-    @ExceptionHandler({FileNotFoundException.class})
+    @ExceptionHandler({PermissionDeniedException.class})
+    @ResponseStatus(code = HttpStatus.FORBIDDEN)
+    @ResponseBody
+    public RestResponse<?> handleException(PermissionDeniedException ex)
+    {
+        return RestResponse.error("operation fails because it lacks permission: " + ex.getMessage());
+    }
+    
+    @ExceptionHandler({FileNotExistsException.class})
     @ResponseStatus(code = HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public RestResponse<?> handleException(FileNotFoundException ex)
+    public RestResponse<?> handleException(FileNotExistsException ex)
     {
-        return RestResponse.error("file does not exist: " + ex.getMessage());
+        return RestResponse.error("operation fails because file does not exist: " + ex.getMessage());
+    }
+    
+    @ExceptionHandler({InvalidParameterException.class})
+    @ResponseStatus(code = HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public RestResponse<?> handleException(InvalidParameterException ex)
+    {
+        return RestResponse.error("operation fails due to invalid parameter: " + ex.getMessage());
+    }
+    
+    @ExceptionHandler({OperationFailedException.class})
+    @ResponseStatus(code = HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public RestResponse<?> handleException(OperationFailedException ex)
+    {
+        return RestResponse.error("operation failed: " + ex.getMessage());
     }
     
     @ExceptionHandler({IllegalStateException.class})
@@ -157,10 +182,10 @@ public class FilesController
         return RestResponse.error("server encountered an i/o error: " + ex.getMessage());
     }
 
-    @GetMapping(path = "/files/home-directory", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/home-directory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getHomeDirectory(
-        @NonNull Authentication authn, 
+        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails)
             throws Exception
     {
@@ -170,23 +195,18 @@ public class FilesController
         
         FilePathResult result = null;
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
-            final org.apache.http.StatusLine statusLine = response1.getStatusLine();
-            final HttpStatus status = HttpStatus.valueOf(statusLine.getStatusCode());
-            if (!status.equals(HttpStatus.OK)) {
-                throw wrapFailureAsException(getHomeDirectoryTemplate.operation(), request1, statusLine);
-            }
-            Assert.state(response1.getEntity() != null, "expected a response HTTP entity!");
-            GetHomeDirectoryResponse r1 = getHomeDirectoryTemplate.responseFromHttpEntity(response1.getEntity());
+            getHomeDirectoryTemplate.failForStatus(response1);
+            GetHomeDirectoryResponse r1 = getHomeDirectoryTemplate.responseFromEntity(response1.getEntity());
             result = FilePathResult.of(r1.getPath());
         }
         
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/files/status", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getStatus(
-        @NonNull Authentication authn, 
+        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath)
             throws Exception  
@@ -197,28 +217,21 @@ public class FilesController
         
         FileStatusResult result = null;
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
-            final org.apache.http.StatusLine statusLine = response1.getStatusLine();
-            final HttpStatus status = HttpStatus.valueOf(statusLine.getStatusCode());
-            if (status.equals(HttpStatus.NOT_FOUND)) {
-                throw new FileNotFoundException(filePath);
-            } else if (!status.equals(HttpStatus.OK)) {
-                throw wrapFailureAsException(getFileStatusTemplate.operation(), request1, statusLine);
-            }
-            Assert.state(response1.getEntity() != null, "expected a response HTTP entity!");
-            GetFileStatusResponse r1 = getFileStatusTemplate.responseFromHttpEntity(response1.getEntity());
+            getFileStatusTemplate.failForStatus(response1);
+            GetFileStatusResponse r1 = getFileStatusTemplate.responseFromEntity(response1.getEntity());
             result = FileStatusResult.of(r1.getFileStatus());
         }
         
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/files/summary", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/summary", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getSummary(
-        @NonNull Authentication authn, 
+        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath)
-            throws IOException  
+            throws Exception  
     {
         final HttpUriRequest request1 = getContentSummaryTemplate
             .requestForPath(userDetails.getUsernameForHdfs(), filePath);
@@ -226,25 +239,18 @@ public class FilesController
         
         ContentSummaryResult result = null;
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
-            final org.apache.http.StatusLine statusLine = response1.getStatusLine();
-            final HttpStatus status = HttpStatus.valueOf(statusLine.getStatusCode());
-            if (status.equals(HttpStatus.NOT_FOUND)) {
-                throw new FileNotFoundException(filePath);
-            } else if (!status.equals(HttpStatus.OK)) {
-                throw wrapFailureAsException(getContentSummaryTemplate.operation(), request1, statusLine);
-            }
-            Assert.state(response1.getEntity() != null, "expected a response HTTP entity!");
-            ContentSummaryResponse r1 = getContentSummaryTemplate.responseFromHttpEntity(response1.getEntity());
+            getContentSummaryTemplate.failForStatus(response1);
+            ContentSummaryResponse r1 = getContentSummaryTemplate.responseFromEntity(response1.getEntity());
             result = ContentSummaryResult.of(r1.getSummary());
         }
         
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/files/file-checksum", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/checksum", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getFileChecksum(
-        @NonNull Authentication authn, 
+        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath)
             throws Exception  
@@ -255,25 +261,18 @@ public class FilesController
         
         FileChecksumResult result = null;
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
-            final org.apache.http.StatusLine statusLine = response1.getStatusLine();
-            final HttpStatus status = HttpStatus.valueOf(statusLine.getStatusCode());
-            if (status.equals(HttpStatus.NOT_FOUND)) {
-                throw new FileNotFoundException(filePath);
-            } else if (!status.equals(HttpStatus.OK)) {
-                throw wrapFailureAsException(getFileChecksumTemplate.operation(), request1, statusLine);
-            }
-            Assert.state(response1.getEntity() != null, "expected a response HTTP entity!");
-            GetFileChecksumResponse r1 = getFileChecksumTemplate.responseFromHttpEntity(response1.getEntity());
+            getFileChecksumTemplate.failForStatus(response1);
+            GetFileChecksumResponse r1 = getFileChecksumTemplate.responseFromEntity(response1.getEntity());
             result = FileChecksumResult.of(r1.getChecksum()); 
         }
         
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/files/list-status", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(path = "/list-status", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> listStatus(
-        @NonNull Authentication authn, 
+        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath)
             throws Exception
@@ -284,26 +283,17 @@ public class FilesController
         
         ListStatusResult result = null; 
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
-            final org.apache.http.StatusLine statusLine = response1.getStatusLine();
-            final HttpStatus status = HttpStatus.valueOf(statusLine.getStatusCode());
-            if (status.equals(HttpStatus.NOT_FOUND)) {
-                throw new FileNotFoundException(filePath);
-            } else if (!status.equals(HttpStatus.OK)) {
-                throw wrapFailureAsException(listStatusTemplate.operation(), request1, statusLine);
-            }
-            Assert.state(response1.getEntity() != null, "expected a response HTTP entity!");
-            ListStatusResponse r1 = listStatusTemplate.responseFromHttpEntity(response1.getEntity());
+            listStatusTemplate.failForStatus(response1);
+            ListStatusResponse r1 = listStatusTemplate.responseFromEntity(response1.getEntity());
             result = ListStatusResult.of(r1.getStatusList());
         }
         
         return RestResponse.result(result);
     }
     
-    private static final int READ_REQUEST_BUFFER_SIZE = 2 * 4096;
-    
-    @GetMapping(path = "/files/content", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(path = "/content", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> download(
-        @NonNull Authentication authn, 
+        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath,
         @RequestParam(name = "length", required = false) @Min(0) Long length,
@@ -311,28 +301,21 @@ public class FilesController
             throws Exception
     {
         final ReadFileRequestParameters parameters = 
-            new ReadFileRequestParameters(length, offset, READ_REQUEST_BUFFER_SIZE);
+            new ReadFileRequestParameters(length, offset, READ_FILE_REQUEST_BUFFER_SIZE);
         final HttpUriRequest request1 = readFileTemplate
             .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
         logger.debug("download: {}", request1);
         
         final CloseableHttpResponse response1 = httpClient.execute(request1);
-        final org.apache.http.StatusLine statusLine = response1.getStatusLine();
-        final HttpStatus status = HttpStatus.valueOf(statusLine.getStatusCode());
         
-        if (!status.equals(HttpStatus.OK)) {
-            // The request has failed: examine status and throw a proper exception
-            Exception ex = null;
-            if (status.equals(HttpStatus.NOT_FOUND)) {
-                ex = new FileNotFoundException(filePath);
-            } else {
-                ex = wrapFailureAsException(readFileTemplate.operation(), request1, statusLine);
-            }
-            response1.close();
+        try {
+            readFileTemplate.failForStatus(response1);
+        } catch (Exception ex) {
+            response1.close(); // must always be closed!
             throw ex;
         }
-        
-        // The request was successful: Stream data from backend
+
+        // The request was successful: Stream data from back-end directly to client
         
         final StreamingResponseBody body = new StreamingResponseBody()
         {
@@ -357,10 +340,10 @@ public class FilesController
             .body(body);
     }
     
-    @PostMapping(path = "/files/directory", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(path = "/directory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public ResponseEntity<?> makeDirectory(
-        @NonNull Authentication authn, 
+        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") String filePath, 
         @RequestParam(name  = "permission", defaultValue = "775") String permission)
@@ -372,11 +355,18 @@ public class FilesController
             .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
         
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
-            final org.apache.http.StatusLine statusLine = response1.getStatusLine();
-            final HttpStatus status = HttpStatus.valueOf(statusLine.getStatusCode());
+            makeDirectoryTemplate.failForStatus(response1);
+            BooleanResponse r = makeDirectoryTemplate.responseFromEntity(response1.getEntity());
+            Assert.state(r.getFlag(), "Expected flag to always be true!");
         }
         
-        // Todo makeDirectory
-        return null;
+        // Redirect to the status URI of this directory
+        
+        final FilesController controller = MvcUriComponentsBuilder.controller(FilesController.class);
+        final URI redirectUri = MvcUriComponentsBuilder
+            .fromMethodCall(controller.getStatus(null, null, filePath))
+            .build().toUri();
+        
+        return ResponseEntity.created(redirectUri).<Void>build();
     }
 }

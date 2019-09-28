@@ -7,7 +7,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.http.protocol.HTTP;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
