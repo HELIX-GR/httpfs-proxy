@@ -19,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.JUnitRestDocumentation;
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation;
@@ -49,6 +50,7 @@ import static org.springframework.restdocs.operation.preprocess.Preprocessors.pr
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.removeHeaders;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.modifyParameters;
 import static org.springframework.restdocs.request.RequestDocumentation.*;
 import static org.springframework.restdocs.headers.HeaderDocumentation.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
@@ -165,9 +167,8 @@ public class FilesControllerTests
         .description("The owning group");
     
     private static final String[] ignoredResponseHeaders = new String[] {
-        "Pragma", 
-        "X-XSS-Protection", "X-Frame-Options", "X-Content-Type-Options",
-        "Strict-Transport-Security", "Cache-Control", "Expire"
+        "Pragma", "X-XSS-Protection", "X-Frame-Options", "X-Content-Type-Options",
+        "Strict-Transport-Security", "Cache-Control", "Expires"
     };
     
     private static final String documentationSnippetNameTemplate = "{class-name}/{method-name}";
@@ -197,14 +198,14 @@ public class FilesControllerTests
     // Helpers
     //
     
-    private void getHomeDirectory() throws Exception
+    private MvcResult getHomeDirectory() throws Exception
     {
         final FieldDescriptor resultPathField = fieldWithPath("path")
             .type(JsonFieldType.STRING)
             .description("The absolute path to the home directory");
         
         final MvcResult mvcresult = mockmvc
-            .perform(get("/files/home-directory")
+            .perform(get("/f/home-directory")
                 .with(user(user1)))
             //.andDo(print())
             .andExpect(status().isOk())
@@ -218,21 +219,23 @@ public class FilesControllerTests
                 // Document response at a high level
                 responseFields(
                     restresponseStatusField, restresponseErrorField, restresponseResultField),
-                // Document nested `result` object for a /files/home-directory request
+                // Document nested `result` object for a /f/home-directory request
                 responseFields(
                     beneathPath("result").withSubsectionId("result"), resultPathField) 
                 ))
             .andReturn();
+        
+        return mvcresult;
     }
     
-    private void getFileStatus(String filePath) throws Exception
+    private MvcResult getFileStatus(String filePath) throws Exception
     {
         FieldDescriptor resultStatusField = subsectionWithPath("status")
             .type(JsonFieldType.OBJECT)
             .description("An object holding the <<resources-filestatus,file status>> of target path");
         
         final MvcResult mvcresult = mockmvc
-            .perform(get("/files/status").param("path", filePath)
+            .perform(get("/f/file/status").param("path", filePath)
                 .with(user(user1)))
             //.andDo(print())
             .andExpect(status().isOk())
@@ -246,27 +249,81 @@ public class FilesControllerTests
                 // Document response at a high level
                 responseFields(
                     restresponseStatusField, restresponseErrorField, restresponseResultField),
-                // Document nested `result` object for a /files/status request
+                // Document nested `result` object for a /f/file/status request
                 responseFields(
                     beneathPath("result").withSubsectionId("result"), resultStatusField),
                 responseFields(
                     beneathPath("result.status").withSubsectionId("result-status"),
-                    fieldstatusTypeField, fieldstatusLengthField, fieldstatusPathField,
-                    fieldstatusPermissionField, fieldstatusBlockSizeField, fieldstatusReplicationField,
-                    fieldstatusAccessTimeField, fieldstatusModificationTimeField,
-                    fieldstatusOwnerField, fieldstatusGroupField)
+                    fieldstatusTypeField, 
+                    fieldstatusLengthField, 
+                    fieldstatusPathField,
+                    fieldstatusPermissionField, 
+                    fieldstatusBlockSizeField, 
+                    fieldstatusReplicationField,
+                    fieldstatusAccessTimeField, 
+                    fieldstatusModificationTimeField,
+                    fieldstatusOwnerField, 
+                    fieldstatusGroupField)
                 ))
             .andReturn();
+        
+        return mvcresult;
     }
     
-    private void listStatus(String filePath) throws Exception
+    private MvcResult getFileChecksum(String filePath) throws Exception
+    {
+        FieldDescriptor resultChecksumField = fieldWithPath("checksum")
+            .type(JsonFieldType.OBJECT)
+            .description("An object holding the details on a computed cheksum");
+        
+        FieldDescriptor resultChecksumAlgorithmField = fieldWithPath("checksum.algorithm")
+            .type(JsonFieldType.STRING)
+            .description("The name of the checksum algorithm (an MD5 variation)");
+        
+        FieldDescriptor resultChecksumBytesField = fieldWithPath("checksum.bytes")
+            .type(JsonFieldType.STRING)
+            .description("The checksum as a hex-encoded string");
+        
+        FieldDescriptor resultChecksumLengthField = fieldWithPath("checksum.length")
+            .type(JsonFieldType.NUMBER)
+            .description("The length (in bytes) of the checksum");
+        
+        final MvcResult mvcresult = mockmvc
+            .perform(get("/f/file/checksum").param("path", filePath)
+                .with(user(user1)))
+            .andDo(print())
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andExpect(jsonPath("$.error").isEmpty())
+            .andExpect(jsonPath("$.result.checksum").isNotEmpty())
+            .andDo(document(documentationSnippetNameTemplate,
+                preprocessResponse(prettyPrint(), removeHeaders(ignoredResponseHeaders)),
+                requestParameters(querystringPathParam),
+                // Document response at a high level
+                responseFields(
+                    restresponseStatusField, restresponseErrorField, restresponseResultField),
+                // Document nested `result` object for a /f/file/checksum request
+                responseFields(
+                    beneathPath("result").withSubsectionId("result"), 
+                    resultChecksumField,
+                    resultChecksumAlgorithmField, 
+                    resultChecksumBytesField, 
+                    resultChecksumLengthField)
+                ))
+            .andReturn();
+        
+        return mvcresult;
+    }
+    
+    private MvcResult listStatus(String filePath) throws Exception
     {
         FieldDescriptor resultStatusesField = subsectionWithPath("statuses")
             .type(JsonFieldType.ARRAY)
             .description("An array of <<resources-filestatus,file status>> objects");
         
         final MvcResult mvcresult = mockmvc
-            .perform(get("/files/list-status").param("path", filePath)
+            .perform(get("/f/listing").param("path", filePath)
                 .with(user(user1)))
             //.andDo(print())
             .andExpect(status().isOk())
@@ -280,11 +337,13 @@ public class FilesControllerTests
                 // Document response at a high level
                 responseFields(
                     restresponseStatusField, restresponseErrorField, restresponseResultField),
-                // Document nested `result` object for a /files/status request
+                // Document nested `result` object for a /f/listing request
                 responseFields(
                     beneathPath("result").withSubsectionId("result"), resultStatusesField)
              ))
             .andReturn();
+        
+        return mvcresult;
     }
     
     //
@@ -298,9 +357,15 @@ public class FilesControllerTests
     }
 
     @Test
-    public void testGetFileStatusY1() throws Exception
+    public void testGetFileStatusX1() throws Exception
     {
         getFileStatus(sampleTextFiles.get(0));
+    }
+    
+    @Test
+    public void testGetFileChecksumX1() throws Exception
+    {
+        getFileChecksum(sampleTextFiles.get(0));
     }
     
     @Test

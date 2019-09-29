@@ -7,15 +7,18 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import javax.validation.ConstraintViolationException;
 import javax.validation.ValidationException;
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -30,7 +33,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -42,9 +47,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.client.HttpServerErrorException.NotImplemented;
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import gr.helix.httpfsproxy.model.RestResponse;
 import gr.helix.httpfsproxy.model.SimpleUserDetails;
@@ -55,9 +60,11 @@ import gr.helix.httpfsproxy.model.controller.FilePathResult;
 import gr.helix.httpfsproxy.model.controller.ListStatusResult;
 import gr.helix.httpfsproxy.model.ops.AppendToFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.BooleanResponse;
+import gr.helix.httpfsproxy.model.ops.ConcatenateFilesRequestParameters;
 import gr.helix.httpfsproxy.model.ops.ContentSummary;
 import gr.helix.httpfsproxy.model.ops.ContentSummaryResponse;
 import gr.helix.httpfsproxy.model.ops.CreateFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.DeleteFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.EnumOperation;
 import gr.helix.httpfsproxy.model.ops.FileAlreadyExistsException;
 import gr.helix.httpfsproxy.model.ops.FileChecksum;
@@ -72,19 +79,20 @@ import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
 import gr.helix.httpfsproxy.model.ops.OperationFailedException;
 import gr.helix.httpfsproxy.model.ops.PermissionDeniedException;
 import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.RenameRequestParameters;
+import gr.helix.httpfsproxy.model.ops.TruncateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 import gr.helix.httpfsproxy.service.OperationTemplate;
-import lombok.NonNull;
 
 
 @Controller
 @Validated
-@RequestMapping(path = { "/fs" })
+@RequestMapping(path = { "/f/" })
 public class FilesController
 {
     private final static Logger logger = LoggerFactory.getLogger(FilesController.class);
     
-    private static final int READ_FILE_REQUEST_BUFFER_SIZE = 4096;
+    private static final int READ_FILE_REQUEST_BUFFER_SIZE = 2 * 4096;
     
     @Autowired
     @Qualifier("httpClient")
@@ -125,6 +133,22 @@ public class FilesController
     @Autowired
     @Qualifier("appendToFileTemplate")
     private OperationTemplate<AppendToFileRequestParameters, Void> appendToFileTemplate;
+ 
+    @Autowired
+    @Qualifier("renameTemplate")
+    private OperationTemplate<RenameRequestParameters, BooleanResponse> renameTemplate;
+    
+    @Autowired
+    @Qualifier("concatenateFilesTemplate")
+    private OperationTemplate<ConcatenateFilesRequestParameters, Void> concatenateFilesTemplate;
+    
+    @Autowired
+    @Qualifier("truncateFileTemplate")
+    private OperationTemplate<TruncateFileRequestParameters, BooleanResponse> truncateFileTemplate;
+    
+    @Autowired
+    @Qualifier("deleteFileTemplate")
+    private OperationTemplate<DeleteFileRequestParameters, BooleanResponse> deleteFileTemplate;
     
     @ModelAttribute("userDetails")
     SimpleUserDetails userDetails(Authentication authentication)
@@ -149,7 +173,7 @@ public class FilesController
     @ResponseBody
     RestResponse<?> handleException(IllegalArgumentException ex)
     {
-        return RestResponse.error("invalid argument: " + ex.getMessage());
+        return RestResponse.error(ex.getMessage());
     }
     
     @ExceptionHandler({PermissionDeniedException.class})
@@ -215,6 +239,9 @@ public class FilesController
             .build().toUri();
     }
     
+    /**
+     * Get the home directory of current user
+     */
     @GetMapping(path = "/home-directory", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getHomeDirectory(
@@ -235,7 +262,12 @@ public class FilesController
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/status", produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Get the status of a file path
+     * 
+     * @param filePath A path to a file or directory
+     */
+    @GetMapping(path = "/file/status", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getStatus(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
@@ -256,7 +288,14 @@ public class FilesController
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/summary", produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Get the content summary of a file path.
+     * <p>This method is normally applied on a directory (where it behaves similarly to <tt>du</tt> in a 
+     * Unix filesystem), but it's legal to apply also on a regular file.
+     * 
+     * @param filePath A path to a file or directory  
+     */
+    @GetMapping(path = "/file/summary", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getSummary(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
@@ -277,11 +316,16 @@ public class FilesController
         return RestResponse.result(result);
     }
     
+    /**
+     * Get the checksum of a regular file. This method will fail if applied on a directory.
+     * 
+     * @param filePath A path to a (regular) file. 
+     */
     @GetMapping(path = "/file/checksum", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> getFileChecksum(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam(name = "path") String filePath)
+        @RequestParam(name = "path") @NotEmpty String filePath)
             throws Exception  
     {
         final HttpUriRequest request1 = getFileChecksumTemplate
@@ -298,10 +342,16 @@ public class FilesController
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/list-status", produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * List file entries under a file path.
+     * <p>This method is normally applied on a directory, but it's legal to also apply on a regular
+     * file (in which case you get a result equivalent to {@link #getStatus(SimpleUserDetails, String)}).
+     * 
+     * @param filePath A path to a file or directory
+     */
+    @GetMapping(path = "/listing", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public RestResponse<?> listStatus(
-        @NonNull Authentication authentication, 
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam(name = "path") String filePath)
             throws Exception
@@ -320,10 +370,17 @@ public class FilesController
         return RestResponse.result(result);
     }
     
-    @GetMapping(path = "/file/content", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<StreamingResponseBody> download(
+    /**
+     * Stream the content of a file.
+     * 
+     * @param filePath A path to a (regular) file
+     * @param length The length (in bytes) to read
+     * @param offset The offset (in bytes) to start reading from
+     */
+    @GetMapping(path = "/file/content")
+    public ResponseEntity<StreamingResponseBody> downloadFile(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam(name = "path") String filePath,
+        @RequestParam(name = "path") @NotEmpty String filePath,
         @RequestParam(name = "length", required = false) @Min(0) Long length,
         @RequestParam(name = "offset", required = false) @Min(0) Long offset) 
             throws Exception
@@ -332,7 +389,7 @@ public class FilesController
             new ReadFileRequestParameters(length, offset, READ_FILE_REQUEST_BUFFER_SIZE);
         final HttpUriRequest request1 = readFileTemplate
             .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
-        logger.debug("download: {}", request1);
+        logger.debug("downloadFile: {}", request1);
         
         final CloseableHttpResponse response1 = httpClient.execute(request1);
         
@@ -368,11 +425,19 @@ public class FilesController
             .body(body);
     }
     
-    @PutMapping(path = "/directory", produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Create a directory on a given path (with nested directories if needed).
+     * <p>Note that this method will succeed if the directory already exists, but will fail if a
+     * regular file exists on the given path.
+     * 
+     * @param filePath The path to the directory 
+     * @param permission The octal permission for the newly created directory
+     */
+    @PutMapping(path = "/directory")
     @ResponseBody
-    public ResponseEntity<?> makeDirectory(
+    public ResponseEntity<?> createDirectory(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestParam(name = "path") String filePath, 
+        @RequestParam(name = "path") @NotEmpty String filePath, 
         @RequestParam(name = "permission", required = false) String permission)
             throws Exception
     {
@@ -380,7 +445,7 @@ public class FilesController
         
         final HttpUriRequest request1 = makeDirectoryTemplate
             .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
-        logger.debug("makeDirectory: {}", request1);
+        logger.debug("createDirectory: {}", request1);
         
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
             makeDirectoryTemplate.failForStatus(response1);
@@ -391,31 +456,43 @@ public class FilesController
         return ResponseEntity.created(uriForStatus(filePath)).<Void>build();
     }
     
-    @PutMapping(path = "/file/content", produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Put content in a file.
+     * 
+     * @param contentType The content-type of the upload (should always be present and equal 
+     *   to <tt>application/octet-stream</tt>)
+     * @param filePath A path to a (regular) file
+     * @param overwrite A flag that indicates if an existing file should be replaced
+     * @param permission The octal permission to set on the file
+     * @param replication The replication factor
+     */
+    @PutMapping(path = "/file/content")
     @ResponseBody
-    public ResponseEntity<?> createFile(
+    public ResponseEntity<?> uploadFile(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestHeader(name = HttpHeaders.CONTENT_TYPE) MediaType contentType,
-        @RequestParam("path") String filePath, 
+        @RequestParam("path") @NotEmpty String filePath, 
         @RequestParam(name  = "overwrite", required = false) Boolean overwrite,
         @RequestParam(name  = "permission", required = false) String permission,
+        @RequestParam(name  = "replication", required = false) Integer replication,
         @RequestBody InputStreamResource inputStreamResource) 
             throws Exception
     {
         if (!contentType.equals(MediaType.APPLICATION_OCTET_STREAM))
-            throw new IllegalArgumentException(
-                "Expected content of type " + MediaType.APPLICATION_OCTET_STREAM);
+            throw new IllegalArgumentException("expected content of type " + MediaType.APPLICATION_OCTET_STREAM);
         
         final CreateFileRequestParameters parameters = new CreateFileRequestParameters();
         if (permission != null) 
             parameters.setPermission(permission);
         if (overwrite != null) 
             parameters.setOverwrite(overwrite);
+        if (replication != null)
+            parameters.setReplication(replication);
         
         final HttpUriRequest request1 = createFileTemplate
             .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters, 
                 inputStreamResource.getInputStream());
-        logger.debug("createFile: {}", request1);
+        logger.debug("uploadFile: {}", request1);
         
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
             createFileTemplate.failForStatus(response1);
@@ -424,28 +501,198 @@ public class FilesController
         return ResponseEntity.created(uriForStatus(filePath)).<Void>build();
     }
     
-    @PostMapping(path = "/file/content", produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Append (i.e post) content to a file.
+     * 
+     * <p>There are 2 different ways to append content to a file, and which one is triggered depends
+     *   on the presence of the <tt>content-type</tt> header:
+     *   <ul>
+     *     <li>If an upload (<tt>content-type</tt> header is present): the request body is the
+     *       content to be appended to the target. In this case, a normal <tt>APPEND</tt> operation
+     *       is performed.
+     *     </li>
+     *     <li>If not an upload (<tt>content-type</tt> header is absent): A list of source files
+     *       (which must be given) are concatenated into the target file. In this case, a <tt>CONCAT</tt>
+     *       operation is performed (happening entirely on the cluster side). 
+     *     </li>
+     *   </ul>
+     * </p>
+     * 
+     * @param filePath A path to an existing (regular) file. This the target of an <tt>APPEND</tt> or
+     *   <tt>CONCAT</tt> operation.
+     * @param contentType The content-type of the upload (if an upload is taking place). If this
+     *   header is present, it should always be equal to <tt>application/octet-stream</tt>.
+     * @param sourceNamesAsString The list of comma-separated names of source files to be concatenated 
+     *   into the target file. These names must be plain file names and will be resolved relative to parent
+     *    of the target file (a limitation from the underlying <tt>CONCAT</tt> operation).
+     */
+    @PostMapping(path = "/file/content")
     @ResponseBody
     public ResponseEntity<?> appendToFile(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
-        @RequestHeader(name = HttpHeaders.CONTENT_TYPE) MediaType contentType,
-        @RequestParam("path") String filePath,
-        @RequestBody InputStreamResource inputStreamResource)
+        @RequestHeader(name = HttpHeaders.CONTENT_TYPE, required = false) MediaType contentType,
+        @RequestParam("path") @NotEmpty String filePath,
+        @RequestParam(name = "sources", required = false) String sourceNamesAsString,
+        @RequestBody(required = false) InputStreamResource inputStreamResource)
             throws Exception
     {
-        if (!contentType.equals(MediaType.APPLICATION_OCTET_STREAM))
-            throw new IllegalArgumentException(
-                "Expected content of type " + MediaType.APPLICATION_OCTET_STREAM);
-        
-        final HttpUriRequest request1 = appendToFileTemplate
-            .requestForPath(userDetails.getUsernameForHdfs(), filePath, 
-                inputStreamResource.getInputStream());
-        logger.debug("appendToFile: {}", request1);
+        if (contentType != null) {
+            if (!StringUtils.isEmpty(sourceNamesAsString)) 
+                throw new IllegalArgumentException("expected sources to be empty!");
+            if (!contentType.equals(MediaType.APPLICATION_OCTET_STREAM))
+                throw new IllegalArgumentException("expected content of type " + MediaType.APPLICATION_OCTET_STREAM);
+            if (inputStreamResource == null)
+                throw new IllegalArgumentException("expected a non-empty request body!");
+            
+            // Append input to target            
+            
+            final HttpUriRequest request1 = appendToFileTemplate
+                .requestForPath(userDetails.getUsernameForHdfs(), filePath, 
+                    inputStreamResource.getInputStream());
+            logger.debug("appendToFile: {}", request1);
+            
+            try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
+                appendToFileTemplate.failForStatus(response1);
+            }
+        } else {
+            if (inputStreamResource != null)
+                throw new IllegalArgumentException("a request body must be accompannied by a content-type header!");
+            if (StringUtils.isEmpty(sourceNamesAsString))
+                throw new IllegalArgumentException("no content to append, no source files to concatenate");
+            
+            // Concatenate sources into target
+            
+            final String dirPath = FilenameUtils.getFullPath(filePath); // target directory
+            final String[] sourceNames = sourceNamesAsString.split(",");
+            
+            if (Arrays.stream(sourceNames).anyMatch(s -> s.indexOf('/') >= 0))
+                throw new IllegalArgumentException("sources are expected as file names (no nested paths)");
+            
+            final List<String> sources = Arrays.stream(sourceNames)
+                .map(s -> StringUtils.applyRelativePath(dirPath, s))
+                .collect(Collectors.toList());
+            
+            final ConcatenateFilesRequestParameters parameters = new ConcatenateFilesRequestParameters(sources);
+            final HttpUriRequest request1 = concatenateFilesTemplate
+                .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
+            logger.debug("appendToFile: {}", request1);
+            
+            try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
+                concatenateFilesTemplate.failForStatus(response1);
+            }
+        }
+       
+        return ResponseEntity.created(uriForStatus(filePath)).<Void>build();
+    }
+    
+    /**
+     * Truncate a file.
+     * 
+     * @param filePath A path to a (regular) file
+     */
+    @DeleteMapping(path = "/file/content")
+    @ResponseBody
+    public ResponseEntity<?> truncateFile(
+        @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
+        @RequestParam("path") @NotEmpty String filePath)
+            throws Exception
+    {
+        final HttpUriRequest request1 = truncateFileTemplate
+            .requestForPath(userDetails.getUsernameForHdfs(), filePath);
+        logger.debug("truncateFile: {}", request1);
         
         try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
-            appendToFileTemplate.failForStatus(response1);
+            truncateFileTemplate.failForStatus(response1);
+            BooleanResponse r = truncateFileTemplate.responseFromEntity(response1.getEntity());
+            Assert.state(r.getFlag(), "Expected flag to always be true!");
         }
         
-        return ResponseEntity.created(uriForStatus(filePath)).<Void>build();
+        return ResponseEntity.noContent().<Void>build();
+    }
+    
+    /**
+     * Delete a file.
+     * <p>Trying to delete a non-empty directory will fail unless <tt>recursive</tt> is set.
+     * 
+     * @param filePath A path to a file or directory
+     * @param recursive A flag that indicates whether we should recursively delete entries of
+     *   directory 
+     */
+    @DeleteMapping(path = "/file")
+    @ResponseBody
+    public ResponseEntity<?> delete(
+        @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
+        @RequestParam("path") @NotEmpty String filePath,
+        @RequestParam(name  = "recursive", required = false) Boolean recursive) 
+            throws Exception
+    {
+        // Note: The WebHDFS API (unlike the API of a conventional filesystem) does not differentiate 
+        // between deleting a (regular) file and a directory.
+        
+        DeleteFileRequestParameters parameters = DeleteFileRequestParameters
+            .of(recursive == null? false : recursive.booleanValue());
+        
+        final HttpUriRequest request1 = deleteFileTemplate
+            .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
+        logger.debug("delete: {}", request1);
+        
+        try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
+            deleteFileTemplate.failForStatus(response1);
+            BooleanResponse r = truncateFileTemplate.responseFromEntity(response1.getEntity());
+            Assert.state(r.getFlag(), "Expected flag to always be true!");
+        }
+        
+        return ResponseEntity.noContent().<Void>build();
+    }
+    
+    /**
+     * Rename a file
+     * 
+     * @param filePath A path to the an existing file or directory
+     * @param destinationFilePath The new path to move to
+     */
+    @PutMapping(path = "/name")
+    @ResponseBody
+    public ResponseEntity<?> rename(
+        @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
+        @RequestParam("path") @NotEmpty String filePath,
+        @RequestParam("destination") @NotEmpty String destinationFilePath) 
+            throws Exception
+    {
+        RenameRequestParameters parameters = RenameRequestParameters.of(destinationFilePath);
+        
+        final HttpUriRequest request1 = renameTemplate
+            .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
+        logger.debug("rename: {}", request1);
+        
+        try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
+            renameTemplate.failForStatus(response1);
+            BooleanResponse r = renameTemplate.responseFromEntity(response1.getEntity());
+            Assert.state(r.getFlag(), "Expected flag to always be true!");
+        }
+        
+        return ResponseEntity.created(uriForStatus(destinationFilePath)).<Void>build();
+    }
+    
+    @PutMapping(path = "/file/permission")
+    @ResponseBody
+    public ResponseEntity<?> setPermission(
+        @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
+        @RequestParam("path") @NotEmpty String filePath,
+        @RequestParam("permission") @NotEmpty String permission)
+    {
+        // Todo setPermission
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    }
+    
+    @PutMapping(path = "/file/replication")
+    @ResponseBody
+    public ResponseEntity<?> setReplication(
+        @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
+        @RequestParam("path") @NotEmpty String filePath,
+        @RequestParam("replication") @NotNull @Min(1) Integer replication)
+    {
+        // Todo setReplication
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 }

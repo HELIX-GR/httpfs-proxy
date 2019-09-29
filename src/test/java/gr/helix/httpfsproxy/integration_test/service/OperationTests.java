@@ -59,6 +59,7 @@ import gr.helix.httpfsproxy.model.ops.ListStatusResponse;
 import gr.helix.httpfsproxy.model.ops.MakeDirectoryRequestParameters;
 import gr.helix.httpfsproxy.model.ops.OperationFailedException;
 import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
+import gr.helix.httpfsproxy.model.ops.RenameRequestParameters;
 import gr.helix.httpfsproxy.model.ops.SetOwnerRequestParameters;
 import gr.helix.httpfsproxy.model.ops.SetPermissionRequestParameters;
 import gr.helix.httpfsproxy.model.ops.SetReplicationRequestParameters;
@@ -213,6 +214,10 @@ public class OperationTests
     private OperationTemplate<SetOwnerRequestParameters, Void> setOwnerTemplate;
     
     @Autowired
+    @Qualifier("renameTemplate")
+    private OperationTemplate<RenameRequestParameters, BooleanResponse> renameTemplate;
+    
+    @Autowired
     private TextAsStringFixture fixture01;
     
     @Autowired
@@ -262,6 +267,21 @@ public class OperationTests
         }
         
         return r.getFileStatus();
+    }
+    
+    private boolean doesFileExist(String path) throws Exception
+    {
+        HttpUriRequest request = getFileStatusTemplate.requestForPath(userName, path);
+        
+        boolean exists;
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            getFileStatusTemplate.failForStatus(response);
+            exists = true;
+        } catch (FileNotExistsException ex) {
+            exists = false;
+        }
+        
+        return exists;
     }
     
     private void getFileStatusOfNonExisitingFile(String path) throws Exception
@@ -509,6 +529,18 @@ public class OperationTests
         }
     }
     
+    private void rename(String path, String destinationPath) throws Exception
+    {
+        RenameRequestParameters parameters = RenameRequestParameters.of(destinationPath);
+        
+        HttpUriRequest request = renameTemplate.requestForPath("user", path, parameters);
+        System.err.println(" * " + request);
+        
+        try (CloseableHttpResponse response = httpClient.execute(request)) {
+            renameTemplate.failForStatus(response);
+        }
+    }
+    
     //
     // Tests
     //
@@ -724,6 +756,7 @@ public class OperationTests
         concatenateFiles(path, sourcePath1);
         String textData = readTextFile(path);
         assertEquals(fixture01.getText(), textData);
+        assertFalse(doesFileExist(sourcePath1));
     }
     
     @Test
@@ -737,6 +770,20 @@ public class OperationTests
         String textData = readTextFile(path);
         String expectedTextData = fixture01.getText() + fixture02.getText();
         assertEquals(expectedTextData, textData);
+        assertFalse(doesFileExist(sourcePath1));
+        assertFalse(doesFileExist(sourcePath2));
+    }
+    
+    @Test
+    public void test07b_d12_concatenateTextFiles() throws Exception
+    {
+        String path = createFileInDirectory(tempDir, "concat-data-1-2-b.txt", fixture01.getText().getBytes());
+        String sourcePath1 = createFileInDirectory(tempDir, "data-part-2.txt", fixture02.getText().getBytes());
+        concatenateFiles(path, sourcePath1);
+        String textData = readTextFile(path);
+        String expectedTextData = fixture01.getText() + fixture02.getText();
+        assertEquals(expectedTextData, textData);
+        assertFalse(doesFileExist(sourcePath1));
     }
     
     @Test
@@ -818,5 +865,33 @@ public class OperationTests
         setReplication(path, DEFAULT_REPLICATION + 1);
         FileStatus st1 = getFileStatus(path);
         assertThat(st1, hasProperty("replication", equalTo(DEFAULT_REPLICATION + 1)));
+    }
+    
+    @Test
+    public void test13a_d1_renameFile() throws Exception
+    {
+        String path = createFileInDirectory(tempDir, "data1-a-to-be-renamed.txt", fixture01.getText().getBytes());
+        FileChecksum checksum0 = getFileChecksum(path);
+        
+        String destinationPath = StringUtils.applyRelativePath(tempDir, "data1-a-renamed.txt");
+        rename(path, destinationPath);
+        FileChecksum checksum1 = getFileChecksum(destinationPath);
+        assertEquals(checksum0.getChecksumAsHexString(), checksum1.getChecksumAsHexString());
+    }
+    
+    @Test
+    public void test13z_renameDirectory() throws Exception
+    {
+        String dirName = String.format("sub-%05d", random.nextInt(100000));
+        String path = StringUtils.applyRelativePath(tempDir, dirName) + "/";
+        makeDirectory(path);
+        createFileInDirectory(path, "timestamp", new byte[0]);
+        
+        String destinationPath = StringUtils.applyRelativePath(tempDir, dirName + "-renamed");
+        rename(path, destinationPath);
+        List<FileStatus> ls1 = listStatus(destinationPath);
+        assertNotNull(ls1);
+        assertThat(ls1, iterableWithSize(1));
+        assertThat(ls1.get(0), hasProperty("path", equalTo("timestamp")));
     }
 }
