@@ -13,12 +13,14 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.validation.ValidationException;
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -47,7 +49,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.client.HttpServerErrorException.NotImplemented;
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -80,6 +81,8 @@ import gr.helix.httpfsproxy.model.ops.OperationFailedException;
 import gr.helix.httpfsproxy.model.ops.PermissionDeniedException;
 import gr.helix.httpfsproxy.model.ops.ReadFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.RenameRequestParameters;
+import gr.helix.httpfsproxy.model.ops.SetPermissionRequestParameters;
+import gr.helix.httpfsproxy.model.ops.SetReplicationRequestParameters;
 import gr.helix.httpfsproxy.model.ops.TruncateFileRequestParameters;
 import gr.helix.httpfsproxy.model.ops.VoidRequestParameters;
 import gr.helix.httpfsproxy.service.OperationTemplate;
@@ -149,6 +152,14 @@ public class FilesController
     @Autowired
     @Qualifier("deleteFileTemplate")
     private OperationTemplate<DeleteFileRequestParameters, BooleanResponse> deleteFileTemplate;
+    
+    @Autowired
+    @Qualifier("setPermissionTemplate")
+    private OperationTemplate<SetPermissionRequestParameters, Void> setPermissionTemplate;
+    
+    @Autowired
+    @Qualifier("setReplicationTemplate")
+    private OperationTemplate<SetReplicationRequestParameters, BooleanResponse> setReplicationTemplate;
     
     @ModelAttribute("userDetails")
     SimpleUserDetails userDetails(Authentication authentication)
@@ -679,10 +690,20 @@ public class FilesController
     public ResponseEntity<?> setPermission(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") @NotEmpty String filePath,
-        @RequestParam("permission") @NotEmpty String permission)
+        @RequestParam("permission") @NotEmpty String permission) 
+            throws Exception
     {
-        // Todo setPermission
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        SetPermissionRequestParameters parameters = SetPermissionRequestParameters.of(permission);
+
+        final HttpUriRequest request1 = setPermissionTemplate
+            .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
+        logger.debug("setPermission: {}", request1);
+        
+        try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
+            setPermissionTemplate.failForStatus(response1);
+        }
+        
+        return ResponseEntity.noContent().<Void>build();
     }
     
     @PutMapping(path = "/file/replication")
@@ -690,9 +711,19 @@ public class FilesController
     public ResponseEntity<?> setReplication(
         @ModelAttribute("userDetails") @NotNull SimpleUserDetails userDetails,
         @RequestParam("path") @NotEmpty String filePath,
-        @RequestParam("replication") @NotNull @Min(1) Integer replication)
+        @RequestParam("replication") @NotNull @Min(1) @Max(12) Integer replication)
+            throws Exception
     {
-        // Todo setReplication
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        SetReplicationRequestParameters parameters = SetReplicationRequestParameters.of(replication);
+        
+        final HttpUriRequest request1 = setReplicationTemplate
+            .requestForPath(userDetails.getUsernameForHdfs(), filePath, parameters);
+        logger.debug("setReplication: {}", request1);
+        
+        try (CloseableHttpResponse response1 = httpClient.execute(request1)) {
+            setReplicationTemplate.failForStatus(response1);
+        }
+        
+        return ResponseEntity.noContent().<Void>build();
     }
 }
