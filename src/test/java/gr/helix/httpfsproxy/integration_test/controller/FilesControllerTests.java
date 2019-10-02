@@ -296,7 +296,7 @@ public class FilesControllerTests
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andExpect(jsonPath("$.error").isEmpty())
-            .andExpect(jsonPath("$.result.checksum").isNotEmpty())
+            .andExpect(jsonPath("$.result.checksum").isMap())
             .andDo(document(documentationSnippetNameTemplate,
                 preprocessResponse(prettyPrint(), removeHeaders(ignoredResponseHeaders)),
                 requestParameters(querystringPathParam),
@@ -346,6 +346,79 @@ public class FilesControllerTests
         return mvcresult;
     }
     
+    private MvcResult getContentSummary(String filePath) throws Exception
+    {
+        FieldDescriptor resultSummaryField = fieldWithPath("summary")
+            .type(JsonFieldType.OBJECT)
+            .description("An object representing a usage summary of a subtree");
+        
+        FieldDescriptor resultSummaryDirectoryCountField = fieldWithPath("summary.directoryCount")
+            .type(JsonFieldType.NUMBER)
+            .description("The number of directories");
+        
+        FieldDescriptor resultSummaryFileCountField = fieldWithPath("summary.fileCount")
+            .type(JsonFieldType.NUMBER)
+            .description("The number of regular files");
+        
+        FieldDescriptor resultSummaryLengthField = fieldWithPath("summary.length")
+            .type(JsonFieldType.NUMBER)
+            .description("The number of bytes used by the content");
+        
+        FieldDescriptor resultSummaryQuotaField = fieldWithPath("summary.quota")
+            .type(JsonFieldType.NUMBER)
+            .description("The quota on the number of entries under this directory");
+        
+        FieldDescriptor resultSummarySpaceConsumedField = fieldWithPath("summary.spaceConsumed")
+            .type(JsonFieldType.NUMBER)
+            .description("The disk space consumed by the content");
+        
+        FieldDescriptor resultSummarySpaceQuotaField = fieldWithPath("summary.spaceQuota")
+            .type(JsonFieldType.NUMBER)
+            .description("The quota on the total disk space");
+        
+        final MvcResult mvcresult = mockmvc
+            .perform(get("/f/file/summary").param("path", filePath)
+                .with(user(user1)))
+            //.andDo(print())
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andExpect(jsonPath("$.error").isEmpty())
+            .andExpect(jsonPath("$.result.summary").isMap())
+            .andDo(document(documentationSnippetNameTemplate,
+                preprocessResponse(prettyPrint(), removeHeaders(ignoredResponseHeaders)),
+                requestParameters(querystringPathParam),
+                // Document response at a high level
+                responseFields(
+                    restresponseStatusField, restresponseErrorField, restresponseResultField),
+                // Document nested `result` object for a /f/file/summary request
+                responseFields(
+                    beneathPath("result").withSubsectionId("result"),
+                    resultSummaryField,
+                    resultSummaryDirectoryCountField,
+                    resultSummaryFileCountField,
+                    resultSummaryLengthField,
+                    resultSummaryQuotaField,
+                    resultSummarySpaceConsumedField,
+                    resultSummarySpaceQuotaField)
+                ))    
+            .andReturn();
+        
+        return mvcresult;
+    }
+    
+    private MvcResult downloadFile(String filePath) throws Exception
+    {
+        final MvcResult mvcresult = mockmvc
+            .perform(get("/f/file/content").param("path", filePath)
+                .with(user(user1)))
+            // Todo
+            .andReturn();
+        
+        // Todo
+        return mvcresult;
+    }
+    
     //
     // Tests
     //
@@ -372,5 +445,11 @@ public class FilesControllerTests
     public void testListStatus() throws Exception
     {
         listStatus(sampleDirectory);
+    }
+    
+    @Test
+    public void testGetContentSummary() throws Exception
+    {
+        getContentSummary(sampleDirectory);
     }
 }

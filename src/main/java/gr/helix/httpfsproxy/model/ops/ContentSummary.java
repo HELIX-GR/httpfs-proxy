@@ -12,7 +12,7 @@ public class ContentSummary
     Integer directoryCount;
     
     /**
-     * The number of files
+     * The number of regular files
      */
     @JsonProperty("fileCount")
     Integer fileCount;
@@ -24,7 +24,7 @@ public class ContentSummary
     Long length;
     
     /**
-     * The namespace quota of this directory
+     * The namespace quota of this directory (number of entries under this directory).
      */
     @JsonProperty("quota")
     Long quota;

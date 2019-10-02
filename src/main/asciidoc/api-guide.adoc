@@ -114,11 +114,11 @@ This is an overview of the files API. All API endpoints, except `/f/home-directo
 
 |Set permission for a file/directory
 |`PUT /f/file/permission`
-|_Not implemented yet_
+|
 
 |Set replication factor for a file
 |`PUT /f/file/replication`
-|_Not implemented yet_
+|
 |===
 
 
@@ -236,8 +236,34 @@ _Todo_
 
 [[files-contentsummary]]
 === Get content summary
+This is a `GET` request to `/f/file/summary`.
+
+==== The request parameters
+It accepts the following request parameters:
+include::{snippets}/files-controller-tests/test-get-content-summary/request-parameters.adoc[]
+
+==== The response
+The response is a summary of space/quota utilization for a given subtree (path) of the HDFS filesystem.
+
+The overall response is as follows:
+include::{snippets}/files-controller-tests/test-get-content-summary/response-fields.adoc[]
+
+The `result` part in detail:
+include::{snippets}/files-controller-tests/test-get-content-summary/response-fields-result.adoc[]
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/files-controller-tests/test-get-content-summary/http-request.adoc[]
+include::{snippets}/files-controller-tests/test-get-content-summary/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/files-controller-tests/test-get-content-summary/curl-request.adoc[]
+
+==== Errors
 
 _Todo_
+
+
 
 
 [[files-mkdir]]
