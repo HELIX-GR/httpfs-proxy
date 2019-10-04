@@ -45,14 +45,17 @@ This section describes some common resources exchanged by the API.
 An object that represents the status of a file/directory in a HDFS filesystem. Is a rough equivalent to the output 
 of the `stat` command in a POSIX filesystem.
 
-include::{snippets}/files-controller-tests/test-get-file-status-x1/response-fields-result-status.adoc[]
-
+include::{snippets}/FilesControllerTests/testGetFileStatus/response-fields-result-status.adoc[]
 
 
 [[files]]
 == Files API
 
 This is an overview of the files API. All API endpoints, except `/f/home-directory`, require a `path` request parameter.
+
+If a `path` does not correspond to an existing file (or when a regular file is expected but a directory is given), the server responds 
+with `404 Not Found` along with a detailed error message (as a JSON payload). 
+
 
 [cols=3*,options="header"]
 |===
@@ -131,18 +134,18 @@ No parameters
 
 ==== The response
 The overall response is as follows:
-include::{snippets}/files-controller-tests/test-get-home-directory/response-fields.adoc[]
+include::{snippets}/FilesControllerTests/testGetHomeDirectory/response-fields.adoc[]
 
 The `result` part in detail:
-include::{snippets}/files-controller-tests/test-get-home-directory/response-fields-result.adoc[]
+include::{snippets}/FilesControllerTests/testGetHomeDirectory/response-fields-result.adoc[]
 
 ==== A request/response example
 
-include::{snippets}/files-controller-tests/test-get-home-directory/http-request.adoc[]
-include::{snippets}/files-controller-tests/test-get-home-directory/http-response.adoc[]
+include::{snippets}/FilesControllerTests/testGetHomeDirectory/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testGetHomeDirectory/http-response.adoc[]
 
 ==== A request example with CURL
-include::{snippets}/files-controller-tests/test-get-home-directory/curl-request.adoc[]
+include::{snippets}/FilesControllerTests/testGetHomeDirectory/curl-request.adoc[]
 
 
 [[files-status]]
@@ -151,28 +154,28 @@ This is a `GET` request to `/f/file/status`.
 
 ==== The request parameters
 It accepts the following request parameters:
-include::{snippets}/files-controller-tests/test-get-file-status-x1/request-parameters.adoc[]
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of a file or a directory
+|===
 
 ==== The response
 The overall response is as follows:
-include::{snippets}/files-controller-tests/test-get-file-status-x1/response-fields.adoc[]
+include::{snippets}/FilesControllerTests/testGetFileStatus/response-fields.adoc[]
 
 The `result` part in detail:
-include::{snippets}/files-controller-tests/test-get-file-status-x1/response-fields-result.adoc[]
+include::{snippets}/FilesControllerTests/testGetFileStatus/response-fields-result.adoc[]
 
 ==== A request/response example
 A typical request/response exhange is the following (note that, for this kind of request, 
 the result `pathSuffix` will always be empty):
 
-include::{snippets}/files-controller-tests/test-get-file-status-x1/http-request.adoc[]
-include::{snippets}/files-controller-tests/test-get-file-status-x1/http-response.adoc[]
+include::{snippets}/FilesControllerTests/testGetFileStatus/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testGetFileStatus/http-response.adoc[]
 
 ==== A request example with CURL
-include::{snippets}/files-controller-tests/test-get-file-status-x1/curl-request.adoc[]
-
-==== Errors
-
-_Todo_
+include::{snippets}/FilesControllerTests/testGetFileStatus/curl-request.adoc[]
 
 
 [[files-filechecksum]]
@@ -181,27 +184,27 @@ This is a `GET` request to `/f/file/checksum`. It returns a variation of an MD5 
 
 ==== The request parameters
 It accepts the following request parameters:
-include::{snippets}/files-controller-tests/test-get-file-checksum-x1/request-parameters.adoc[]
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of a (regular) file
+|===
 
 ==== The response
 The overall response is as follows:
-include::{snippets}/files-controller-tests/test-get-file-checksum-x1/response-fields.adoc[]
+include::{snippets}/FilesControllerTests/testGetFileChecksum/response-fields.adoc[]
 
 The `result` part in detail:
-include::{snippets}/files-controller-tests/test-get-file-checksum-x1/response-fields-result.adoc[]
+include::{snippets}/FilesControllerTests/testGetFileChecksum/response-fields-result.adoc[]
 
 ==== A request/response example
 A typical request/response exhange is as follows: 
 
-include::{snippets}/files-controller-tests/test-get-file-checksum-x1/http-request.adoc[]
-include::{snippets}/files-controller-tests/test-get-file-checksum-x1/http-response.adoc[]
+include::{snippets}/FilesControllerTests/testGetFileChecksum/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testGetFileChecksum/http-response.adoc[]
 
 ==== A request example with CURL
-include::{snippets}/files-controller-tests/test-get-file-checksum-x1/curl-request.adoc[]
-
-==== Errors
-
-_Todo_
+include::{snippets}/FilesControllerTests/testGetFileChecksum/curl-request.adoc[]
 
 
 [[files-liststatus]]
@@ -210,28 +213,28 @@ This is a `GET` request to `/f/listing`.
 
 ==== The request parameters
 It accepts the following request parameters:
-include::{snippets}/files-controller-tests/test-list-status/request-parameters.adoc[]
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of a directory
+|===
 
 ==== The response
 The overall response is as follows:
-include::{snippets}/files-controller-tests/test-list-status/response-fields.adoc[]
+include::{snippets}/FilesControllerTests/testListStatus/response-fields.adoc[]
 
 The `result` part in detail:
-include::{snippets}/files-controller-tests/test-list-status/response-fields-result.adoc[]
+include::{snippets}/FilesControllerTests/testListStatus/response-fields-result.adoc[]
 
 ==== A request/response example
 A typical request/response exhange is the following (note that, for this kind of request, 
 `pathSuffix` will always a non-empty file/directory name):
 
-include::{snippets}/files-controller-tests/test-list-status/http-request.adoc[]
-include::{snippets}/files-controller-tests/test-list-status/http-response.adoc[]
+include::{snippets}/FilesControllerTests/testListStatus/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testListStatus/http-response.adoc[]
 
 ==== A request example with CURL
-include::{snippets}/files-controller-tests/test-list-status/curl-request.adoc[]
-
-==== Errors
-
-_Todo_
+include::{snippets}/FilesControllerTests/testListStatus/curl-request.adoc[]
 
 
 [[files-contentsummary]]
@@ -240,86 +243,296 @@ This is a `GET` request to `/f/file/summary`.
 
 ==== The request parameters
 It accepts the following request parameters:
-include::{snippets}/files-controller-tests/test-get-content-summary/request-parameters.adoc[]
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of a file or directory
+|===
 
 ==== The response
 The response is a summary of space/quota utilization for a given subtree (path) of the HDFS filesystem.
 
 The overall response is as follows:
-include::{snippets}/files-controller-tests/test-get-content-summary/response-fields.adoc[]
+include::{snippets}/FilesControllerTests/testGetContentSummary/response-fields.adoc[]
 
 The `result` part in detail:
-include::{snippets}/files-controller-tests/test-get-content-summary/response-fields-result.adoc[]
+include::{snippets}/FilesControllerTests/testGetContentSummary/response-fields-result.adoc[]
 
 ==== A request/response example
 A typical request/response exhange is the following:
-include::{snippets}/files-controller-tests/test-get-content-summary/http-request.adoc[]
-include::{snippets}/files-controller-tests/test-get-content-summary/http-response.adoc[]
+include::{snippets}/FilesControllerTests/testGetContentSummary/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testGetContentSummary/http-response.adoc[]
 
 ==== A request example with CURL
-include::{snippets}/files-controller-tests/test-get-content-summary/curl-request.adoc[]
-
-==== Errors
-
-_Todo_
-
-
-
-
-[[files-mkdir]]
-=== Create a directory
-
-_Todo_
+include::{snippets}/FilesControllerTests/testGetContentSummary/curl-request.adoc[]
 
 
 [[files-download]]
 === Download a file
+This is a `GET` request to `/f/file/content`.
 
-_Todo_
+Because content can be quite large, this method supports compressed responses; it examines the `Accept-Encoding` request header and 
+outputs compressed content (if, of course, is requested so). Currently, the only supported compression algorithm is `gzip`.
+
+==== The request parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of a regular file
+|`+length+`||The number of bytes to be returned
+|`+offset+`||The starting byte position
+|===
+
+==== The response
+The response always comes as generic binary content (i.e. content of MIME type `application/octet-stream`).
+
+==== A request/response example
+A typical request/response exhange is the following (file content not shown):
+include::{snippets}/FilesControllerTests/testDownloadFile/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testDownloadFile/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testDownloadFile/curl-request.adoc[]
+
+In order to reduce the size of the transfer, you can use the `--compressed` flag which will send the appropriate `Accept-Encoding: gzip` 
+request header and will let the server switch to output compression.
+
+
+[[files-mkdir]]
+=== Create a directory
+This is a `PUT` request to `/f/directory`.
+
+This method will recursively create all parent directories (if needed so). 
+If target directory already exists, it will do nothing and will report a success.
+
+==== The request parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of a directory (to be created)
+|`+permission+`||The octal permission for this directory (default is `775`)
+|===
+
+==== The response
+On success, the server responds with `201 Created`, an empty body, and the `Location` header set to the status URI of the newly created directory.
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testCreateTempDirectory/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testCreateTempDirectory/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testCreateTempDirectory/curl-request.adoc[]
 
 
 [[files-rename]]
 === Rename a file/directory
+This is a `PUT` request to `/f/name`.
 
-_Todo_
+==== The request parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of an existing file or directory
+|`+destination+`|Yes|The new path to move to
+|===
+
+==== The response
+On success, the server responds with `201 Created`, an empty body, and the `Location` header set to the status URI of the new path.
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testRenameDirectory/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testRenameDirectory/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testRenameDirectory/curl-request.adoc[]
 
 
 [[files-upload]]
 === Upload a file
+This is a `PUT` request to `/f/file/content`.
 
-_Todo_
+==== The request parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of a regular file (to be created or replaced)
+|`+overwrite+`||A flag that indicates if an existing file should be replaced (default is `false`)
+|`+replication+`||The replication factor
+|`+permission+`||The octal permission for this file (default is `664`)
+|===
 
+==== The response
+On success, the server responds with `201 Created`, an empty body, and the `Location` header set to the status URI of the newly created (or replaced) file.
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testUploadFileInTempDirectory/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testUploadFileInTempDirectory/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testUploadFileInTempDirectory/curl-request.adoc[]
+
+For uploading real-world files, the recommended way is by using the `--upload-file <FILE>` switch (instead of supplying a `--data 'DATA'` switch). 
 
 [[files-append]]
 === Append to a file
+This is a `POST` request to `/f/file/content`. 
 
-_Todo_
+Note that a request header of `Content-Type: application/octet-stream` *must* be present to let the server know that the source of our data (to be appended)
+comes from the request body (instead of <<files-concatenate,concatenating sources>> already present in the HDFS filesystem). 
+
+==== The request parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of an existing regular file (to append content to)
+|===
+
+==== The response
+On success, the server responds with `201 Created`, an empty body, and the `Location` header set to the status URI of the modified file.
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testAppendTextToFile/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testAppendTextToFile/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testAppendTextToFile/curl-request.adoc[]
+
+For appending large amounts of data, the recommended way is using `--upload-file <FILE>` switch (instead of supplying a `--data 'DATA'` switch).
 
 
 [[files-concatenate]]
 === Concatenate sources into a file
+This is a `POST` request to `/f/file/content`. 
 
-_Todo_
+Note that (unlike the append scenario) the request body *must* be absent (and, of course, any relevant header of `Content-*` must also be absent).
+
+==== The request parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of an existing regular file (the target file)
+|`+sources+`|Yes|The list of comma-separated names of source files to be concatenated into the target file. These names must be plain file names and will be resolved relative to parent of the target file
+|===
+
+==== The response
+On success, the server responds with `201 Created`, an empty body, and the `Location` header set to the status URI of the target file.
+
+==== A request/response example
+Let `hello-part.txt` and `goodbye-part.txt` be the source files to be concatenated into an existing target file `hello-goodbye.txt`. The source files are located in the same directory with the target file (this is a limitation from the underlying `HttpFS` operation).
+
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testConcatenateTextSourcesToFile/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testConcatenateTextSourcesToFile/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testConcatenateTextSourcesToFile/curl-request.adoc[]
 
 
 [[files-truncate]]
 === Truncate a file
+This is a `DELETE` request to `/f/file/content`.
 
-_Todo_
+==== The request parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of an existing regular file (to be truncated to zero length)
+|===
+
+==== The response
+On success, the server responds with `204 No Content` and an empty body. 
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testTruncateFile/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testTruncateFile/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testTruncateFile/curl-request.adoc[]
 
 
 [[files-delete]]
 === Delete a file/directory
+This is a `DELETE` request to `/f/file`
+
+==== The request parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of an existing file or directory
+|`+recursive+`||A flag that indicates if a directory should be deleted recursively (default is `false`)
+|===
+
+==== The response
+On success, the server responds with `204 No Content` and an empty body. 
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testDeleteFile/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testDeleteFile/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testDeleteFile/curl-request.adoc[]
 
 
 [[files-permission]]
 === Set permission for a file/directory
+This is a `PUT` request to `/f/file/permission`
 
-_Todo_
+==== The request parameters
+parameters
+It accepts the following request parameters:
+[cols="1,1,2"]
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of an existing file or directory
+|`+permission+`|Yes|An octal permission to set
+|===
+
+==== The response
+On success, the server responds with `204 No Content` and an empty body. 
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testSetPermission/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testSetPermission/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testSetPermission/curl-request.adoc[]
 
 
 [[files-replication]]
 === Set replication factor for a file
+This is a `PUT` request to `/f/file/replication`
 
-_Todo_
+==== The request parameters
+|===
+|Parameter|Required|Description
+|`+path+`|Yes|A user-relative or absolute path of an existing file or directory
+|`+replication+`|Yes|The replication factor (>= 2) to apply
+|===
+
+==== The response
+On success, the server responds with `204 No Content` and an empty body. 
+
+==== A request/response example
+A typical request/response exhange is the following:
+include::{snippets}/FilesControllerTests/testSetReplication/http-request.adoc[]
+include::{snippets}/FilesControllerTests/testSetReplication/http-response.adoc[]
+
+==== A request example with CURL
+include::{snippets}/FilesControllerTests/testSetReplication/curl-request.adoc[]
+
 
