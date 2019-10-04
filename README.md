@@ -9,7 +9,7 @@ an HDFS filesystem, simplifying the underlying webhdfs API exposed from the Http
 
 It acts as a gateway service (similarly to the what HttpFS does) i.e. it does not require that a client has network access to the Hadoop cluster.
 
-The full documentation for the HTTP API (of the master branch) can be found at https://helix-gr.github.io/httpfs-proxy/
+The full documentation for the HTTP API (of the latest non-snapshot version) can be found at https://helix-gr.github.io/httpfs-proxy/
 
 ## Build
 
