@@ -135,7 +135,7 @@ public class AdminController
         final ModelAndView r = new ModelAndView();
         if (userInfo == null) {
             r.setStatus(HttpStatus.NOT_FOUND);
-            r.setViewName("/error-404");
+            r.setViewName("error-404");
         } else {
             userForm.copyUserInfo(userInfo);
             r.addObject("userId", userId);
@@ -189,11 +189,11 @@ public class AdminController
         ModelAndView r = new ModelAndView();
         if (userInfo == null) {
             r.setStatus(HttpStatus.NOT_FOUND);
-            r.setViewName("/error-404");
+            r.setViewName("error-404");
         } else {
             userForm.copyUserInfo(userInfo);
             r.addObject("userId", userId);
-            r.setViewName("/admin/user-delete");
+            r.setViewName("admin/user-delete");
         }
         return r;
     }
@@ -209,7 +209,7 @@ public class AdminController
         ModelAndView r = new ModelAndView();
         if (userInfo == null) {
             r.setStatus(HttpStatus.NOT_FOUND);
-            r.setViewName("/error-404");
+            r.setViewName("error-404");
             return r;
         }
         
