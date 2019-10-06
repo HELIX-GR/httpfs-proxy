@@ -22,6 +22,8 @@ public class HttpClientConfiguration
             .build();
         
         return HttpClients.custom()
+            // proxying requests from multiple HDFS users: always perform state-less requests
+            .disableCookieManagement() 
             .setDefaultRequestConfig(defaultRequestConfig)
             .setMaxConnTotal(100)
             .setMaxConnPerRoute(40)
