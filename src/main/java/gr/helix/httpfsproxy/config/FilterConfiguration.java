@@ -10,7 +10,7 @@ import gr.helix.httpfsproxy.servlet.DecompressionFilter;
 @Configuration
 public class FilterConfiguration
 {
-    @Bean
+    @Bean // Fixme not working under Tomcat 8.x
     public FilterRegistrationBean<DecompressionFilter> registerDecompressionFilter()
     {
         final DecompressionFilter filter = new DecompressionFilter();
