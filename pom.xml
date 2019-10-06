@@ -12,7 +12,7 @@
     
     <groupId>gr.helix</groupId>
     <artifactId>httpfs-proxy</artifactId>
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.3</version>
     <name>helix-httpfs-proxy</name>
     <description>An authenticating proxy for an HttpFS/HDFS server</description>
     <packaging>war</packaging>
