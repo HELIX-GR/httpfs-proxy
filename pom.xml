@@ -15,7 +15,7 @@
     <version>0.0.3-SNAPSHOT</version>
     <name>helix-httpfs-proxy</name>
     <description>An authenticating proxy for an HttpFS/HDFS server</description>
-    <packaging>jar</packaging>
+    <packaging>war</packaging>
 
     <properties>
         <java.version>1.8</java.version>
@@ -145,13 +145,11 @@
         </dependency>
         
         <!-- Uncomment when packaging as a WAR (mark dependencies as provided) -->
-        <!--
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-tomcat</artifactId>
             <scope>provided</scope>
         </dependency>
-        -->
         
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -163,23 +161,7 @@
 
     <build>
         <plugins>
-
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>repackage</id>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                        <configuration>
-                            <classifier>exec</classifier>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            
+                   
             <!-- Copy additional resources under target directory -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
