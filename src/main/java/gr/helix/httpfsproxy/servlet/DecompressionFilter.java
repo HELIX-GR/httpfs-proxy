@@ -2,7 +2,6 @@ package gr.helix.httpfsproxy.servlet;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PushbackInputStream;
 import java.util.zip.GZIPInputStream;
 
 import javax.servlet.Filter;
@@ -100,6 +99,9 @@ public class DecompressionFilter implements Filter
     
     protected boolean shouldFilter(HttpServletRequest request)
     {
+        String httpMethod = request.getMethod();
+        if (!httpMethod.equalsIgnoreCase("PUT") && !httpMethod.contentEquals("POST"))
+            return false;
         return "gzip".equalsIgnoreCase(request.getHeader(HttpHeaders.CONTENT_ENCODING));
     }
     
