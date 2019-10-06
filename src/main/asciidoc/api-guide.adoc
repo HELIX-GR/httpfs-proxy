@@ -387,7 +387,7 @@ To reduce the amount of transferred data, compress the request body: pipe the ou
 [source,bash]
 ----
 gzip -c ~/data/road-network.csv | \
-   curl -T - -H "Content-Encoding: gzip" -H "Content-Type: application/octet-stream" -X POST ...'
+   curl -T "-" -H "Content-Encoding: gzip" -H "Content-Type: application/octet-stream" -X POST ...
 ----
 
 

@@ -16,6 +16,7 @@ public class FilterConfiguration
         final DecompressionFilter filter = new DecompressionFilter();
         
         FilterRegistrationBean<DecompressionFilter> reg = new FilterRegistrationBean<>(filter);
+        reg.addUrlPatterns("/f/file/content"); 
         reg.setOrder(Ordered.LOWEST_PRECEDENCE);
         return reg;
     }
