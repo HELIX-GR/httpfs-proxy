@@ -5,7 +5,7 @@
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 1.5.8">
-<meta name="author" content="HttpFS-Proxy v0.0.1 HELIX-GR">
+<meta name="author" content="HttpFS-Proxy v0.0.3 HELIX-GR">
 <title>API Guide - HttpFS-Proxy</title>
 <style>
 @import url(http://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.2.0/css/font-awesome.css);
@@ -641,7 +641,7 @@ span.icon > [class^="icon-"], span.icon > [class*=" icon-"] { cursor: default; }
 <div id="header">
 <h1>API Guide - HttpFS-Proxy</h1>
 <div class="details">
-<span id="author" class="author">HttpFS-Proxy v0.0.1 HELIX-GR</span><br>
+<span id="author" class="author">HttpFS-Proxy v0.0.3 HELIX-GR</span><br>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -1099,7 +1099,7 @@ the result <code>pathSuffix</code> will always be empty):</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/file/status?path=temp/1570192667655/hello.txt HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/file/status?path=temp/1570383373547/hello.txt HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -1118,8 +1118,8 @@ Content-Length: 364
       "permission" : "644",
       "length" : 13,
       "blockSize" : 67108864,
-      "accessTime" : 1570192669297,
-      "modificationTime" : 1570192669316,
+      "accessTime" : 1570383375309,
+      "modificationTime" : 1570383375330,
       "owner" : "user",
       "group" : "user",
       "replication" : 2
@@ -1134,7 +1134,7 @@ Content-Length: 364
 <h4 id="_a_request_example_with_curl_2"><a class="link" href="#_a_request_example_with_curl_2">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570192667655/hello.txt' -i -X GET</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570383373547/hello.txt' -i -X GET</code></pre>
 </div>
 </div>
 </div>
@@ -1252,7 +1252,7 @@ Content-Length: 364
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/file/checksum?path=temp/1570192667655/hello.txt HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/file/checksum?path=temp/1570383373547/hello.txt HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -1280,7 +1280,7 @@ Content-Length: 233
 <h4 id="_a_request_example_with_curl_3"><a class="link" href="#_a_request_example_with_curl_3">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/checksum?path=temp/1570192667655/hello.txt' -i -X GET</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/checksum?path=temp/1570383373547/hello.txt' -i -X GET</code></pre>
 </div>
 </div>
 </div>
@@ -1384,7 +1384,7 @@ Content-Length: 233
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/listing?path=temp/1570192667655/ HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/listing?path=temp/1570383373547/ HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -1404,7 +1404,7 @@ Content-Type: application/json;charset=UTF-8
       "length" : 0,
       "blockSize" : 0,
       "accessTime" : 0,
-      "modificationTime" : 1570192668709,
+      "modificationTime" : 1570383374702,
       "owner" : "user",
       "group" : "user",
       "replication" : 0
@@ -1414,8 +1414,8 @@ Content-Type: application/json;charset=UTF-8
       "permission" : "644",
       "length" : 28,
       "blockSize" : 67108864,
-      "accessTime" : 1570192669469,
-      "modificationTime" : 1570192669599,
+      "accessTime" : 1570383375487,
+      "modificationTime" : 1570383375617,
       "owner" : "user",
       "group" : "user",
       "replication" : 2
@@ -1425,8 +1425,8 @@ Content-Type: application/json;charset=UTF-8
       "permission" : "644",
       "length" : 12,
       "blockSize" : 67108864,
-      "accessTime" : 1570192669665,
-      "modificationTime" : 1570192669680,
+      "accessTime" : 1570383375683,
+      "modificationTime" : 1570383375703,
       "owner" : "user",
       "group" : "user",
       "replication" : 3
@@ -1437,7 +1437,7 @@ Content-Type: application/json;charset=UTF-8
       "length" : 0,
       "blockSize" : 0,
       "accessTime" : 0,
-      "modificationTime" : 1570192669830,
+      "modificationTime" : 1570383375857,
       "owner" : "user",
       "group" : "user",
       "replication" : 0
@@ -1452,7 +1452,7 @@ Content-Type: application/json;charset=UTF-8
 <h4 id="_a_request_example_with_curl_4"><a class="link" href="#_a_request_example_with_curl_4">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/listing?path=temp/1570192667655/' -i -X GET</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/listing?path=temp/1570383373547/' -i -X GET</code></pre>
 </div>
 </div>
 </div>
@@ -1588,7 +1588,7 @@ Content-Type: application/json;charset=UTF-8
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/file/summary?path=temp/1570192667655/ HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/file/summary?path=temp/1570383373547/ HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -1619,7 +1619,7 @@ Content-Length: 233
 <h4 id="_a_request_example_with_curl_5"><a class="link" href="#_a_request_example_with_curl_5">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/summary?path=temp/1570192667655/' -i -X GET</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/summary?path=temp/1570383373547/' -i -X GET</code></pre>
 </div>
 </div>
 </div>
@@ -1681,7 +1681,7 @@ outputs compressed content (if, of course, is requested so). Currently, the only
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/file/content?path=temp/1570192667655/hello.txt HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">GET /f/file/content?path=temp/1570383373547/hello.txt HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -1696,7 +1696,7 @@ Content-Type: application/octet-stream</code></pre>
 <h4 id="_a_request_example_with_curl_6"><a class="link" href="#_a_request_example_with_curl_6">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570192667655/hello.txt' -i -X GET</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570383373547/hello.txt' -i -X GET</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1757,14 +1757,14 @@ If target directory already exists, it will do nothing and will report a success
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/directory?path=temp/1570192667655/ HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/directory?path=temp/1570383373547/ HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 201 Created
-Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570192667655/</code></pre>
+Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570383373547/</code></pre>
 </div>
 </div>
 </div>
@@ -1772,7 +1772,7 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 <h4 id="_a_request_example_with_curl_7"><a class="link" href="#_a_request_example_with_curl_7">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/directory?path=temp/1570192667655/' -i -X PUT</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/directory?path=temp/1570383373547/' -i -X PUT</code></pre>
 </div>
 </div>
 </div>
@@ -1825,14 +1825,14 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/name?path=temp/1570192667655/foo&amp;destination=temp/1570192667655/baz HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/name?path=temp/1570383373547/foo&amp;destination=temp/1570383373547/baz HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 201 Created
-Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570192667655/baz</code></pre>
+Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570383373547/baz</code></pre>
 </div>
 </div>
 </div>
@@ -1840,7 +1840,7 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 <h4 id="_a_request_example_with_curl_8"><a class="link" href="#_a_request_example_with_curl_8">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/name?path=temp/1570192667655/foo&amp;destination=temp/1570192667655/baz' -i -X PUT</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/name?path=temp/1570383373547/foo&amp;destination=temp/1570383373547/baz' -i -X PUT</code></pre>
 </div>
 </div>
 </div>
@@ -1849,6 +1849,10 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 <h3 id="files-upload"><a class="link" href="#files-upload">Upload a file</a></h3>
 <div class="paragraph">
 <p>This is a <code>PUT</code> request to <code>/f/file/content</code>.</p>
+</div>
+<div class="paragraph">
+<p>Because content can be quite large, this method supports request body compression: it examines the <code>Content-Encoding</code> request header and
+acts accordingly (by de-compressing content on the server side). Currently, the only supported compression algorithm is <code>gzip</code>.</p>
 </div>
 <div class="sect3">
 <h4 id="_the_request_parameters_9"><a class="link" href="#_the_request_parameters_9">The request parameters</a></h4>
@@ -1903,7 +1907,7 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/file/content?path=temp/1570192667655/hello.txt&amp;overwrite=true HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/file/content?path=temp/1570383373547/hello.txt&amp;overwrite=true HTTP/1.1
 Host: httpfsproxy.example.net:8443
 Content-Type: application/octet-stream
 Content-Length: 13
@@ -1914,7 +1918,7 @@ Hello Hadoop!</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 201 Created
-Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570192667655/hello.txt</code></pre>
+Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570383373547/hello.txt</code></pre>
 </div>
 </div>
 </div>
@@ -1922,13 +1926,22 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 <h4 id="_a_request_example_with_curl_9"><a class="link" href="#_a_request_example_with_curl_9">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570192667655/hello.txt&amp;overwrite=true' -i -X PUT \
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570383373547/hello.txt&amp;overwrite=true' -i -X PUT \
     -H 'Content-Type: application/octet-stream' \
     -d 'Hello Hadoop!'</code></pre>
 </div>
 </div>
 <div class="paragraph">
 <p>For uploading real-world files, the recommended way is by using the <code>--upload-file &lt;FILE&gt;</code> switch (instead of supplying a <code>--data 'DATA'</code> switch).</p>
+</div>
+<div class="paragraph">
+<p>To reduce the amount of transferred data, compress the request body: pipe the output of <code>gzip</code> to <code>curl</code> and add the <code>Content-Encoding: gzip</code> request header. For example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">gzip -c ~/data/road-network.csv | \
+   curl -T - -H "Content-Encoding: gzip" -H "Content-Type: application/octet-stream" -X POST ...'</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -1940,6 +1953,9 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 <div class="paragraph">
 <p>Note that a request header of <code>Content-Type: application/octet-stream</code> <strong>must</strong> be present to let the server know that the source of our data (to be appended)
 comes from the request body (instead of <a href="#files-concatenate">concatenating sources</a> already present in the HDFS filesystem).</p>
+</div>
+<div class="paragraph">
+<p>This method also supports request body compression (same as in the <a href="#files-upload">upload</a> case).</p>
 </div>
 <div class="sect3">
 <h4 id="_the_request_parameters_10"><a class="link" href="#_the_request_parameters_10">The request parameters</a></h4>
@@ -1979,7 +1995,7 @@ comes from the request body (instead of <a href="#files-concatenate">concatenati
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">POST /f/file/content?path=temp/1570192667655/hello-and-then-goodbye.txt HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">POST /f/file/content?path=temp/1570383373547/hello-and-then-goodbye.txt HTTP/1.1
 Host: httpfsproxy.example.net:8443
 Content-Length: 16
 Content-Type: application/octet-stream
@@ -1990,7 +2006,7 @@ You say goodbye!</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 201 Created
-Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570192667655/hello-and-then-goodbye.txt</code></pre>
+Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570383373547/hello-and-then-goodbye.txt</code></pre>
 </div>
 </div>
 </div>
@@ -1998,7 +2014,7 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 <h4 id="_a_request_example_with_curl_10"><a class="link" href="#_a_request_example_with_curl_10">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570192667655/hello-and-then-goodbye.txt' -i -X POST \
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570383373547/hello-and-then-goodbye.txt' -i -X POST \
     -H 'Content-Type: application/octet-stream' \
     -d 'You say goodbye!'</code></pre>
 </div>
@@ -2062,14 +2078,14 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">POST /f/file/content?path=temp/1570192667655/hello-goodbye.txt&amp;sources=hello-part.txt,goodbye-part.txt HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">POST /f/file/content?path=temp/1570383373547/hello-goodbye.txt&amp;sources=hello-part.txt,goodbye-part.txt HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">HTTP/1.1 201 Created
-Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570192667655/hello-goodbye.txt</code></pre>
+Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/1570383373547/hello-goodbye.txt</code></pre>
 </div>
 </div>
 </div>
@@ -2077,7 +2093,7 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 <h4 id="_a_request_example_with_curl_11"><a class="link" href="#_a_request_example_with_curl_11">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570192667655/hello-goodbye.txt&amp;sources=hello-part.txt,goodbye-part.txt' -i -X POST</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570383373547/hello-goodbye.txt&amp;sources=hello-part.txt,goodbye-part.txt' -i -X POST</code></pre>
 </div>
 </div>
 </div>
@@ -2125,7 +2141,7 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157019266
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">DELETE /f/file/content?path=temp/1570192667655/hello.txt HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">DELETE /f/file/content?path=temp/1570383373547/hello.txt HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -2139,7 +2155,7 @@ Host: httpfsproxy.example.net:8443</code></pre>
 <h4 id="_a_request_example_with_curl_12"><a class="link" href="#_a_request_example_with_curl_12">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570192667655/hello.txt' -i -X DELETE</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/content?path=temp/1570383373547/hello.txt' -i -X DELETE</code></pre>
 </div>
 </div>
 </div>
@@ -2192,7 +2208,7 @@ Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">DELETE /f/file?path=temp/1570192667655/hello.txt HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">DELETE /f/file?path=temp/1570383373547/hello.txt HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -2206,7 +2222,7 @@ Host: httpfsproxy.example.net:8443</code></pre>
 <h4 id="_a_request_example_with_curl_13"><a class="link" href="#_a_request_example_with_curl_13">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file?path=temp/1570192667655/hello.txt' -i -X DELETE</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file?path=temp/1570383373547/hello.txt' -i -X DELETE</code></pre>
 </div>
 </div>
 </div>
@@ -2260,7 +2276,7 @@ It accepts the following request parameters:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/file/permission?path=temp/1570192667655/hello.txt&amp;permission=640 HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/file/permission?path=temp/1570383373547/hello.txt&amp;permission=640 HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -2274,7 +2290,7 @@ Host: httpfsproxy.example.net:8443</code></pre>
 <h4 id="_a_request_example_with_curl_14"><a class="link" href="#_a_request_example_with_curl_14">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/permission?path=temp/1570192667655/hello.txt&amp;permission=640' -i -X PUT</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/permission?path=temp/1570383373547/hello.txt&amp;permission=640' -i -X PUT</code></pre>
 </div>
 </div>
 </div>
@@ -2324,7 +2340,7 @@ Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/file/replication?path=temp/1570192667655/hello.txt&amp;replication=3 HTTP/1.1
+<pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">PUT /f/file/replication?path=temp/1570383373547/hello.txt&amp;replication=3 HTTP/1.1
 Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 </div>
@@ -2338,7 +2354,7 @@ Host: httpfsproxy.example.net:8443</code></pre>
 <h4 id="_a_request_example_with_curl_15"><a class="link" href="#_a_request_example_with_curl_15">A request example with CURL</a></h4>
 <div class="listingblock">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/replication?path=temp/1570192667655/hello.txt&amp;replication=3' -i -X PUT</code></pre>
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">$ curl 'https://httpfsproxy.example.net:8443/f/file/replication?path=temp/1570383373547/hello.txt&amp;replication=3' -i -X PUT</code></pre>
 </div>
 </div>
 </div>
@@ -2348,7 +2364,7 @@ Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-10-04 15:30:03 +0300
+Last updated 2019-10-06 20:42:43 +0300
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/github.min.css">

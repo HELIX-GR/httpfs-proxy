@@ -356,6 +356,9 @@ include::{snippets}/FilesControllerTests/testRenameDirectory/curl-request.adoc[]
 === Upload a file
 This is a `PUT` request to `/f/file/content`.
 
+Because content can be quite large, this method supports request body compression: it examines the `Content-Encoding` request header and
+acts accordingly (by de-compressing content on the server side). Currently, the only supported compression algorithm is `gzip`.
+
 ==== The request parameters
 It accepts the following request parameters:
 [cols="1,1,2"]
@@ -380,12 +383,22 @@ include::{snippets}/FilesControllerTests/testUploadFileInTempDirectory/curl-requ
 
 For uploading real-world files, the recommended way is by using the `--upload-file <FILE>` switch (instead of supplying a `--data 'DATA'` switch). 
 
+To reduce the amount of transferred data, compress the request body: pipe the output of `gzip` to `curl` and add the `Content-Encoding: gzip` request header. For example:
+[source,bash]
+----
+gzip -c ~/data/road-network.csv | \
+   curl -T - -H "Content-Encoding: gzip" -H "Content-Type: application/octet-stream" -X POST ...'
+----
+
+
 [[files-append]]
 === Append to a file
 This is a `POST` request to `/f/file/content`. 
 
 Note that a request header of `Content-Type: application/octet-stream` *must* be present to let the server know that the source of our data (to be appended)
 comes from the request body (instead of <<files-concatenate,concatenating sources>> already present in the HDFS filesystem). 
+
+This method also supports request body compression (same as in the <<files-upload,upload>> case).
 
 ==== The request parameters
 It accepts the following request parameters:
