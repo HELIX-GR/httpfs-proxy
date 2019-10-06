@@ -5,7 +5,7 @@
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 1.5.8">
-<meta name="author" content="HttpFS-Proxy v0.0.3 HELIX-GR">
+<meta name="author" content="HttpFS-Proxy v0.0.4-SNAPSHOT HELIX-GR">
 <title>API Guide - HttpFS-Proxy</title>
 <style>
 @import url(http://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.2.0/css/font-awesome.css);
@@ -641,7 +641,7 @@ span.icon > [class^="icon-"], span.icon > [class*=" icon-"] { cursor: default; }
 <div id="header">
 <h1>API Guide - HttpFS-Proxy</h1>
 <div class="details">
-<span id="author" class="author">HttpFS-Proxy v0.0.3 HELIX-GR</span><br>
+<span id="author" class="author">HttpFS-Proxy v0.0.4-SNAPSHOT HELIX-GR</span><br>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -1940,7 +1940,7 @@ Location: https://httpfsproxy.example.net:8443/f/file/status?path=temp/157038337
 <div class="listingblock">
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">gzip -c ~/data/road-network.csv | \
-   curl -T - -H "Content-Encoding: gzip" -H "Content-Type: application/octet-stream" -X POST ...'</code></pre>
+   curl -T "-" -H "Content-Encoding: gzip" -H "Content-Type: application/octet-stream" -X POST ...</code></pre>
 </div>
 </div>
 </div>
@@ -2364,7 +2364,7 @@ Host: httpfsproxy.example.net:8443</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-10-06 20:42:43 +0300
+Last updated 2019-10-06 21:25:41 +0300
 </div>
 </div>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.13.1/styles/github.min.css">
