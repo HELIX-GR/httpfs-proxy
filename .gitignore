@@ -23,6 +23,9 @@ ScratchTests.java
 /src/main/resources/config/*.properties
 /src/main/resources/config/*.xml
 
+# helper scripts
+/deploy.sh
+/undeploy.sh
 
 .apt_generated
 .classpath
