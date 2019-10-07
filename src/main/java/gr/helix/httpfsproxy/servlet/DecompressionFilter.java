@@ -108,7 +108,7 @@ public class DecompressionFilter implements Filter
     @Override
     public void init(FilterConfig filterConfig) throws ServletException
     {
-        Filter.super.init(filterConfig);
+        // no-op
     }
     
     @Override
